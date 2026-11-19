@@ -133,6 +133,10 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
 .felt .rail { position: absolute; inset: calc(14% - 12px) calc(12% - 12px); border-radius: 50% / 50%; border: 12px solid #6b4a2b; box-shadow: 0 8px 24px rgba(0,0,0,.18); pointer-events: none; }
 .felt-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.22); font-size: 28px; letter-spacing: .5em; pointer-events: none; }
 .seat { position: absolute; transform: translate(-50%, -50%); width: 224px; z-index: 1; }
+.you { position: absolute; left: 50%; top: 92%; transform: translate(-50%, -50%); z-index: 2; background: var(--brass); color: #1b1408; font: 700 15px var(--display); border-radius: 999px; padding: 10px 22px; box-shadow: var(--shadow); letter-spacing: .04em; }
+.side { position: absolute; top: -11px; right: 12px; z-index: 2; background: var(--brass-soft); color: var(--ink); border: 1px solid var(--brass); font: 600 10.5px var(--body); border-radius: 999px; padding: 1px 8px; }
+.mvs { display: flex; gap: 4px; }
+.mvs button { font: 600 12px var(--body); border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 7px; width: 30px; height: 26px; cursor: pointer; }
 .seat .num { position: absolute; top: -11px; left: 12px; z-index: 2; background: var(--ink); color: var(--paper); font: 600 11px var(--mono); border-radius: 999px; padding: 2px 8px; }
 .seat.drop-target > .scard, .seat.drop-target > .sempty { outline: 3px dashed var(--brass); outline-offset: 3px; }
 .sempty { background: color-mix(in srgb, var(--paper) 85%, transparent); border: 2px dashed var(--line); border-radius: 12px; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -160,6 +164,7 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
   .felt { aspect-ratio: auto; min-height: 0; display: flex; flex-direction: column; gap: 18px; padding-top: 6px; }
   .felt::before, .felt .rail, .felt-logo { display: none; }
   .seat { position: relative; transform: none; width: 100%; left: auto !important; top: auto !important; }
+  .you { position: relative; left: auto; top: auto; transform: none; align-self: center; order: 99; }
   .ghost-card { width: min(90vw, 360px); }
 }
 details { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; }
@@ -235,18 +240,18 @@ details p { max-width: 75ch; color: var(--muted); }
     <section class="tablebar" aria-label="Table setup">
       <div>
         <h2>My table</h2>
-        <p class="small">Seat the players you're sitting with, then drag cards to the seats they're in. Seat 1 is at the top and numbers run clockwise. Your table is saved in this browser.</p>
+        <p class="small">You're always at the bottom. Add the players you're sitting with, then drag them into the spots they're in around you. Your table is saved in this browser.</p>
       </div>
       <div class="tbctl">
-        <label class="small" for="nseats">Seats</label>
-        <select class="sel" id="nseats"><option value="2">2 (heads-up)</option><option value="6" selected>6-max</option><option value="8">8</option><option value="9">9</option></select>
+        <label class="small" for="nseats">Table</label>
+        <select class="sel" id="nseats"><option value="2">Heads-up</option><option value="6" selected>6-max</option><option value="8">8-handed</option><option value="9">9-handed</option></select>
         <select class="sel" id="tfmt" aria-label="Stats to show"><option value="auto">Cash stats, else tournament</option><option value="cash">Cash stats</option><option value="tour">Tournament stats</option></select>
         <button type="button" class="btn ghost" id="tclear">Clear table</button>
       </div>
     </section>
     <div class="felt-wrap"><div class="felt" id="felt" aria-label="Poker table"><div class="rail"></div><div class="felt-logo" aria-hidden="true">♠ ♥ ♦ ♣</div></div></div>
     <datalist id="plist"></datalist>
-    <p class="small tnote">Red numbers are well above the pool, blue well below. Drag a card by its name bar, or use its seat menu.</p>
+    <p class="small tnote">Red numbers are well above the pool, blue well below. Drag a card by its name bar onto another spot to swap them, or use its arrows.</p>
   </div>
   <details>
     <summary>How the cards are made</summary>
@@ -369,21 +374,20 @@ details p { max-width: 75ch; color: var(--muted); }
     c.append(body); return c;
   }
   // ---------- my table ----------
-  const T = {n: 6, seats: new Array(6).fill(null), fmt: 'auto'};
-  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.slice(0, T.n); while (T.seats.length < T.n) T.seats.push(null); T.fmt = sv.fmt || 'auto'; } } catch (e) {}
-  if (Array.isArray(state.seated) && state.seated.length && T.seats.every(x => !x)) state.seated.slice(0, T.n).forEach((p, i) => { T.seats[i] = p; });
+  const T = {n: 6, seats: new Array(5).fill(null), fmt: 'auto'};
+  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.filter(x => x !== '__me__').slice(0, T.n - 1); while (T.seats.length < T.n - 1) T.seats.push(null); T.fmt = sv.fmt || 'auto'; } } catch (e) {}
+  if (Array.isArray(state.seated) && state.seated.length && T.seats.every(x => !x)) state.seated.slice(0, T.n - 1).forEach((p, i) => { T.seats[i] = p; });
   function saveSeats() { try { localStorage.setItem('phenom-seats', JSON.stringify(T)); } catch (e) {} }
   function seatedHas(p) { return T.seats.includes(p); }
   function toggleSeat(p) {
     const i = T.seats.indexOf(p);
     if (i >= 0) T.seats[i] = null;
-    else { const j = T.seats.indexOf(null); if (j < 0) { status('Your table is full. Remove a player or add seats on the My table page.', 'err'); return; } T.seats[j] = p; }
+    else { const j = T.seats.indexOf(null); if (j < 0) { status('Your table is full. Remove a player or pick a bigger table on the My table page.', 'err'); return; } T.seats[j] = p; }
     saveSeats(); render();
   }
   function seatPos(i, n) {
-    const ang = (-90 + (n === 2 ? 0 : 360 / n / 2) + 360 * i / n) * Math.PI / 180;
-    const a = ang - (n === 2 ? Math.PI / 2 : 0);
-    return {x: 50 + 41 * Math.cos(n === 2 ? (i === 0 ? -Math.PI / 2 : Math.PI / 2) : a), y: 50 + 39 * Math.sin(n === 2 ? (i === 0 ? -Math.PI / 2 : Math.PI / 2) : a)};
+    const ang = (90 + 360 * (i + 1) / n) * Math.PI / 180;
+    return {x: 50 + 40 * Math.cos(ang), y: 50 + 38 * Math.sin(ang)};
   }
   function seatCard(r, i) {
     const k = T.fmt === 'tour' ? 'tour' : T.fmt === 'cash' ? 'cash' : (r.cash_hands >= 50 ? 'cash' : 'tour');
@@ -391,7 +395,7 @@ details p { max-width: 75ch; color: var(--muted); }
     const c = el('div', 'scard');
     const g = el('div', 'grip'); g.style.borderTopColor = col; g.dataset.seat = i; g.title = 'Drag to another seat';
     g.append(el('span', 'sn', r.player));
-    const x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + r.player + ' from seat ' + (i + 1)); x.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); render(); }); x.addEventListener('pointerdown', e => e.stopPropagation());
+    const x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + r.player + ' from your table'); x.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); render(); }); x.addEventListener('pointerdown', e => e.stopPropagation());
     g.append(x); c.append(g);
     const b = el('div', 'sb');
     const row = el('div', 'row'); const pill = el('span', 'pill', st); pill.style.color = col; row.append(pill); row.append(el('span', null, fI(r[k + '_hands']) + ' ' + (k === 'cash' ? 'cash' : 'tourn.') + ' hands')); b.append(row);
@@ -401,34 +405,39 @@ details p { max-width: 75ch; color: var(--muted); }
     const reads = (r[k + '_reads'] || []).slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
-    const mv = el('select'); mv.setAttribute('aria-label', 'Move ' + r.player + ' to seat');
-    for (let s2 = 0; s2 < T.n; s2++) { const o = document.createElement('option'); o.value = s2; o.textContent = 'Seat ' + (s2 + 1) + (s2 === i ? ' (here)' : T.seats[s2] ? ' (swap)' : ''); if (s2 === i) o.selected = true; mv.append(o); }
-    mv.addEventListener('change', () => moveSeat(i, +mv.value)); mv.addEventListener('pointerdown', e => e.stopPropagation());
-    b.append(mv); c.append(b);
+    const last = T.seats.length - 1;
+    if (last > 0) {
+      const mv = el('div', 'mvs');
+      const l = el('button', null, '◀'); l.type = 'button'; l.setAttribute('aria-label', 'Move ' + r.player + ' one spot to your left'); l.disabled = i === 0; l.addEventListener('click', () => moveSeat(i, i - 1));
+      const rt = el('button', null, '▶'); rt.type = 'button'; rt.setAttribute('aria-label', 'Move ' + r.player + ' one spot to your right'); rt.disabled = i === last; rt.addEventListener('click', () => moveSeat(i, i + 1));
+      [l, rt].forEach(x3 => x3.addEventListener('pointerdown', e => e.stopPropagation())); mv.append(l, rt); b.append(mv);
+    }
+    c.append(b);
     return c;
   }
-  function moveSeat(from, to) { if (from === to || to < 0 || to >= T.n) return; const t = T.seats[to]; T.seats[to] = T.seats[from]; T.seats[from] = t; saveSeats(); renderTable(); }
+  function moveSeat(from, to) { if (from === to || to < 0 || to >= T.seats.length) return; const t = T.seats[to]; T.seats[to] = T.seats[from]; T.seats[from] = t; saveSeats(); renderTable(); }
   function renderTable() {
-    const filled = T.seats.filter(x => x && x !== '__me__').length; const sc = $('seatcount'); sc.hidden = !filled; sc.textContent = filled;
+    const filled = T.seats.filter(Boolean).length; const sc = $('seatcount'); sc.hidden = !filled; sc.textContent = filled;
     if ($('view-table').hidden) return;
     $('nseats').value = String(T.n); $('tfmt').value = T.fmt;
     const byName = new Map(state.rows.map(r => [r.player, r]));
-    const felt = $('felt'); felt.querySelectorAll('.seat').forEach(n => n.remove());
+    const felt = $('felt'); felt.querySelectorAll('.seat, .you').forEach(n => n.remove());
+    const n = T.seats.length;
     T.seats.forEach((p, i) => {
       const pos = seatPos(i, T.n); const s2 = el('div', 'seat'); s2.dataset.seat = i; s2.style.left = pos.x + '%'; s2.style.top = pos.y + '%';
-      s2.append(el('span', 'num', 'Seat ' + (i + 1)));
-      if (p === '__me__') { const m = el('div', 'sme', 'You'); const u = el('button', null, 'Not my seat'); u.type = 'button'; u.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); }); m.append(u); s2.append(m); }
-      else if (p && byName.get(p)) s2.append(seatCard(byName.get(p), i));
+      if (n > 1 && i === 0) s2.append(el('span', 'side', 'Your left'));
+      if (n > 1 && i === n - 1) s2.append(el('span', 'side', 'Your right'));
+      if (n === 1) s2.append(el('span', 'side', 'Across from you'));
+      if (p && byName.get(p)) s2.append(seatCard(byName.get(p), i));
       else {
         if (p && !byName.get(p) && state.rows.length) T.seats[i] = null;
-        const e2 = el('div', 'sempty'); const inp = document.createElement('input'); inp.setAttribute('list', 'plist'); inp.placeholder = 'Add a player'; inp.id = 'seat-in-' + i; inp.setAttribute('aria-label', 'Player in seat ' + (i + 1));
+        const e2 = el('div', 'sempty'); const inp = document.createElement('input'); inp.setAttribute('list', 'plist'); inp.placeholder = '+ Add a player'; inp.id = 'seat-in-' + i; inp.setAttribute('aria-label', 'Add a player to this spot');
         inp.addEventListener('change', () => { const r = state.rows.find(x2 => x2.player.toLowerCase() === inp.value.trim().toLowerCase()); if (!r) { inp.setCustomValidity('No card for that name'); inp.reportValidity(); return; } const old = T.seats.indexOf(r.player); if (old >= 0) T.seats[old] = null; T.seats[i] = r.player; saveSeats(); renderTable(); render(); });
-        e2.append(inp);
-        if (!T.seats.includes('__me__')) { const me = el('button', 'me', 'This is my seat'); me.type = 'button'; me.addEventListener('click', () => { T.seats[i] = '__me__'; saveSeats(); renderTable(); }); e2.append(me); }
-        s2.append(e2);
+        e2.append(inp); s2.append(e2);
       }
       felt.append(s2);
     });
+    felt.append(el('div', 'you', 'You'));
     const dl = $('plist'); if (dl.childElementCount !== state.rows.length) { dl.replaceChildren(); state.rows.forEach(r => { const o = document.createElement('option'); o.value = r.player; dl.append(o); }); }
   }
   // pointer drag (mouse and touch)
@@ -473,9 +482,9 @@ details p { max-width: 75ch; color: var(--muted); }
   let qt; $('q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; state.limit = 48; render(); }, 120); });
   $('fmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); state.limit = 48; render(); }));
   $('sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
-  $('nseats').addEventListener('change', e => { const n = +e.target.value; const keep = T.seats.filter(Boolean); T.n = n; T.seats = new Array(n).fill(null); keep.slice(0, n).forEach((p, i) => { T.seats[i] = p; }); saveSeats(); renderTable(); render(); });
+  $('nseats').addEventListener('change', e => { const n = +e.target.value; const keep = T.seats.filter(Boolean); T.n = n; T.seats = new Array(n - 1).fill(null); keep.slice(0, n - 1).forEach((p, i) => { T.seats[i] = p; }); saveSeats(); renderTable(); render(); });
   $('tfmt').addEventListener('change', e => { T.fmt = e.target.value; saveSeats(); renderTable(); });
-  $('tclear').addEventListener('click', () => { T.seats = new Array(T.n).fill(null); saveSeats(); renderTable(); render(); });
+  $('tclear').addEventListener('click', () => { T.seats = new Array(T.n - 1).fill(null); saveSeats(); renderTable(); render(); });
   $('more').addEventListener('click', () => { state.limit += 48; render(); });
 
   // ---------- upload ----------
