@@ -160,6 +160,8 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
 .ghost-card { position: fixed; z-index: 50; pointer-events: none; width: 224px; opacity: .92; transform: rotate(-2deg); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
 .seat.lifting > .scard { opacity: .35; }
 .tnote { margin-top: 0; }
+.scard .few { font-size: 11px; color: var(--brass); }
+optgroup { font-style: normal; }
 @media (max-width: 760px) {
   .felt { aspect-ratio: auto; min-height: 0; display: flex; flex-direction: column; gap: 18px; padding-top: 6px; }
   .felt::before, .felt .rail, .felt-logo { display: none; }
@@ -245,7 +247,9 @@ details p { max-width: 75ch; color: var(--muted); }
       <div class="tbctl">
         <label class="small" for="nseats">Table</label>
         <select class="sel" id="nseats"><option value="2">Heads-up</option><option value="6" selected>6-max</option><option value="8">8-handed</option><option value="9">9-handed</option></select>
-        <select class="sel" id="tfmt" aria-label="Stats to show"><option value="auto">Cash stats, else tournament</option><option value="cash">Cash stats</option><option value="tour">Tournament stats</option></select>
+        <label class="small" for="tgame">Game</label>
+        <select class="sel" id="tgame"></select>
+        <select class="sel" id="tfmt" aria-label="Stats to show"><option value="both">Cash and tournaments</option><option value="cash">Cash only</option><option value="tour">Tournaments only</option></select>
         <button type="button" class="btn ghost" id="tclear">Clear table</button>
       </div>
     </section>
@@ -308,7 +312,7 @@ details p { max-width: 75ch; color: var(--muted); }
   }
   function rebuild() {
     state.rows = E.buildCards(state.acc, NOTES);
-    state.pool = poolRates(state.acc);
+    state.pool = poolRates(state.acc); indexCounts();
     $('t-players').textContent = fI(state.rows.length);
     $('t-hands').textContent = fI(state.baseHands + state.extraHands);
     $('t-contrib').textContent = fI(state.uploads);
@@ -374,8 +378,8 @@ details p { max-width: 75ch; color: var(--muted); }
     c.append(body); return c;
   }
   // ---------- my table ----------
-  const T = {n: 6, seats: new Array(5).fill(null), fmt: 'auto'};
-  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.filter(x => x !== '__me__').slice(0, T.n - 1); while (T.seats.length < T.n - 1) T.seats.push(null); T.fmt = sv.fmt || 'auto'; } } catch (e) {}
+  const T = {n: 6, seats: new Array(5).fill(null), fmt: 'both'};
+  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.filter(x => x !== '__me__').slice(0, T.n - 1); while (T.seats.length < T.n - 1) T.seats.push(null); T.fmt = sv.fmt === 'cash' || sv.fmt === 'tour' ? sv.fmt : 'both'; T.game = sv.game || 'all'; } } catch (e) {}
   if (Array.isArray(state.seated) && state.seated.length && T.seats.every(x => !x)) state.seated.slice(0, T.n - 1).forEach((p, i) => { T.seats[i] = p; });
   function saveSeats() { try { localStorage.setItem('phenom-seats', JSON.stringify(T)); } catch (e) {} }
   function seatedHas(p) { return T.seats.includes(p); }
@@ -390,19 +394,33 @@ details p { max-width: 75ch; color: var(--muted); }
     return {x: 50 + 40 * Math.cos(ang), y: 50 + 38 * Math.sin(ang)};
   }
   function seatCard(r, i) {
-    const k = T.fmt === 'tour' ? 'tour' : T.fmt === 'cash' ? 'cash' : (r.cash_hands >= 50 ? 'cash' : 'tour');
-    const P = state.pool[k === 'cash' ? 'C' : 'T']; const st = r[k + '_style'] || r.style; const col = 'var(' + (styleVar[st] || '--std') + ')';
+    const both = T.fmt === 'both'; const k = T.fmt === 'tour' ? 'tour' : T.fmt === 'cash' ? 'cash' : (r.cash_hands >= 50 ? 'cash' : 'tour');
+    const P = state.pool[k === 'cash' ? 'C' : 'T']; const st = (both ? r.style : r[k + '_style']) || r.style; const col = 'var(' + (styleVar[st] || '--std') + ')';
     const c = el('div', 'scard');
     const g = el('div', 'grip'); g.style.borderTopColor = col; g.dataset.seat = i; g.title = 'Drag to another seat';
     g.append(el('span', 'sn', r.player));
     const x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + r.player + ' from your table'); x.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); render(); }); x.addEventListener('pointerdown', e => e.stopPropagation());
     g.append(x); c.append(g);
     const b = el('div', 'sb');
-    const row = el('div', 'row'); const pill = el('span', 'pill', st); pill.style.color = col; row.append(pill); row.append(el('span', null, fI(r[k + '_hands']) + ' ' + (k === 'cash' ? 'cash' : 'tourn.') + ' hands')); b.append(row);
+    const row = el('div', 'row'); const pill = el('span', 'pill', st); pill.style.color = col; row.append(pill); row.append(el('span', null, both ? fI(r.cash_hands + r.tour_hands) + ' hands' : fI(r[k + '_hands']) + ' ' + (k === 'cash' ? 'cash' : 'tourn.') + ' hands')); b.append(row);
     const mini = el('div', 'mini');
-    [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['F. steal', 'fold_steal'], ['WTSD', 'wtsd'], ['F. river', 'fold_river']].forEach(([lab, f]) => { const v = r[k + '_' + f], pv = P[f]; const d = el('div'); d.append(document.createTextNode(lab)); const bb = el('b', null, v == null ? '–' : v.toFixed(0) + '%'); if (v != null && pv != null) { if (v - pv >= 8) bb.className = 'hi'; else if (pv - v >= 8) bb.className = 'lo'; bb.title = 'Pool ' + pv.toFixed(0) + '%'; } d.append(bb); mini.append(d); });
-    b.append(mini);
-    const reads = (r[k + '_reads'] || []).slice(0, 2); const ul = el('ul', 'sr');
+    const BL_ALL = ['27TD','A5TD','Badugi','Badeucy','O8','Badacey','2-7 Single Draw No',"Hold'em","Hold'em No",'Omaha Pot','Dramaha 2-7','Dramaha High','5 Card Omaha Hi/Lo Pot','FLO/DB'];
+    const games = gamesFor(T.game) || (both ? BL_ALL : null);
+    const cell = (lab, v, pv) => { const d = el('div'); d.append(document.createTextNode(lab)); const bb = el('b', null, v == null ? '–' : v.toFixed(0) + '%'); if (v != null && pv != null) { if (v - pv >= 8) bb.className = 'hi'; else if (pv - v >= 8) bb.className = 'lo'; bb.title = 'Pool ' + pv.toFixed(0) + '%'; } d.append(bb); mini.append(d); };
+    if (games) {
+      const fk = both ? 'B' : (k === 'cash' ? 'C' : 'T'); const S = state.selCache && state.selCache.key === T.game + fk ? state.selCache.S : (state.selCache = {key: T.game + fk, S: selStats(games, fk)}).S;
+      const me = S.player(r.player);
+      row.lastChild.textContent = T.game === 'all' ? fI(r.cash_hands + r.tour_hands) + ' hands' : fI(me.hands) + ' hands in ' + $('tgame').selectedOptions[0].textContent;
+      S.defs.forEach(([lab], j) => cell(lab, me.vals[j], S.pool[j]));
+      b.append(mini);
+      if (T.game !== 'all' && me.hands < 30) b.append(el('div', 'few', me.hands ? 'Few hands in this game: treat as a guess.' : 'No hands in this game yet: showing nothing.'));
+    } else {
+      [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['F. steal', 'fold_steal'], ['WTSD', 'wtsd'], ['F. river', 'fold_river']].forEach(([lab, f]) => cell(lab, r[k + '_' + f], P[f]));
+      b.append(mini);
+    }
+    let allR = both ? [...(r.cash_reads || []), ...(r.tour_reads || [])].filter((x, j, a) => a.findIndex(y => y.text === x.text) === j) : (r[k + '_reads'] || []);
+    if (games) { const lab = (GNAME[T.game] || '').toLowerCase(); const keyw = {'27TD': '2-7 td', 'A5TD': 'a-5 td', 'O8': 'omaha hi/lo', 'Stud8': 'stud hi/lo', '7 Card Stud': 'stud high', '2-7 Single Draw No': '2-7 single draw'}[T.game] || lab; allR = allR.slice().sort((a, b2) => (b2.games.toLowerCase() === keyw) - (a.games.toLowerCase() === keyw)); }
+    const reads = allR.slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
     const last = T.seats.length - 1;
@@ -419,7 +437,7 @@ details p { max-width: 75ch; color: var(--muted); }
   function renderTable() {
     const filled = T.seats.filter(Boolean).length; const sc = $('seatcount'); sc.hidden = !filled; sc.textContent = filled;
     if ($('view-table').hidden) return;
-    $('nseats').value = String(T.n); $('tfmt').value = T.fmt;
+    $('nseats').value = String(T.n); $('tfmt').value = T.fmt; fillGameSelect(); state.selCache = null;
     const byName = new Map(state.rows.map(r => [r.player, r]));
     const felt = $('felt'); felt.querySelectorAll('.seat, .you').forEach(n => n.remove());
     const n = T.seats.length;
@@ -439,6 +457,45 @@ details p { max-width: 75ch; color: var(--muted); }
     });
     felt.append(el('div', 'you', 'You'));
     const dl = $('plist'); if (dl.childElementCount !== state.rows.length) { dl.replaceChildren(); state.rows.forEach(r => { const o = document.createElement('option'); o.value = r.player; dl.append(o); }); }
+  }
+  // ---------- game / mix picker for the table ----------
+  const GNAME = {'27TD':'2-7 Triple Draw','A5TD':'A-5 Triple Draw','Badugi':'Badugi','Badeucy':'Badeucy','Badacey':'Badacey','O8':'Omaha Hi/Lo','Stud8':'Stud Hi/Lo','7 Card Stud':'Stud','Razz':'Razz','27Razz':'2-7 Razz','2-7 Single Draw No':'2-7 Single Draw (NL)',"Hold'em":"Limit Hold'em","Hold'em No":"NL Hold'em",'Omaha Pot':'PLO','5 Card Omaha Hi/Lo Pot':'5-Card PLO8','Dramaha 2-7':'Dramaha 2-7','Dramaha High':'Dramaha High','Dramaha Badugi':'Dramaha Badugi','Archie 6s Hi/Lo':'Archie 6s','FLO/DB':'FLO Double Board','7 Card Stud Hi/Lo Regular':'Stud Hi/Lo Regular','Pot Limit 2-7 Triple Draw':'PL 2-7 Triple Draw'};
+  const MIXES = [
+    ['mix:8game', '8-Game Mix', ['27TD',"Hold'em",'O8','Razz','7 Card Stud','Stud8',"Hold'em No",'Omaha Pot']],
+    ['mix:horse', 'H.O.R.S.E.', ["Hold'em",'O8','Razz','7 Card Stud','Stud8']],
+    ['mix:td', 'Triple Draw Mix', ['27TD','A5TD','Badugi','Badeucy','Badacey']],
+    ['mix:draw', 'All draw games', ['27TD','A5TD','Badugi','Badeucy','Badacey','2-7 Single Draw No','Pot Limit 2-7 Triple Draw','Archie 6s Hi/Lo']],
+    ['mix:stud', 'All stud games', ['7 Card Stud','Stud8','Razz','27Razz','7 Card Stud Hi/Lo Regular']],
+    ['mix:omaha', 'All Omaha games', ['O8','Omaha Pot','5 Card Omaha Hi/Lo Pot','FLO/DB','Dramaha High','Dramaha 2-7','Dramaha Badugi']]];
+  const STUDSET = new Set(['7 Card Stud','Stud8','Razz','27Razz','7 Card Stud Hi/Lo Regular','Super 7 Card Stud','Super 7 Card Stud Hi/Lo','Super Razz','Super 2-7 Razz','Razzdugi','Razzdeucey']);
+  const FINAL = g => STUDSET.has(g) ? 4 : (g === '2-7 Single Draw No' ? 1 : 3);
+  T.game = T.game || 'all';
+  function indexCounts() {
+    const by = {C: {}, T: {}}; const tot = {};
+    for (const [k, v] of Object.entries(state.acc.counts)) { const f = k[0]; const rest = k.slice(2); const cut = rest.lastIndexOf('|'); const p = rest.slice(0, cut), g = rest.slice(cut + 1); ((by[f][p] = by[f][p] || {}))[g] = v; tot[g] = (tot[g] || 0) + v[0]; }
+    state.by = by; state.gameTotals = tot;
+  }
+  function gamesFor(sel) { if (sel === 'all') return null; const m = MIXES.find(x => x[0] === sel); return m ? m[2] : [sel]; }
+  const FX = Object.fromEntries(E.FIELDS.map((f, i) => [f, i]));
+  function selStats(games, fmt) {
+    // returns function(player) -> stats over the selected games, plus pool rates
+    const studOnly = games.every(g => STUDSET.has(g)), anyStud = games.some(g => STUDSET.has(g));
+    const defs = studOnly
+      ? [['VPIP', ['vpip'], ['hands']], ['Complete', ['pfr'], ['hands']], ['BI fold', ['bi_fold'], ['bi_vs_complete']], ['F. 4th', ['r1_fold_bet'], ['r1_face_bet']], ['WTSD', ['wtsd'], ['saw_post']], ['F. 7th', ['r4_fold_bet'], ['r4_face_bet']]]
+      : [['VPIP', ['vpip'], ['hands']], ['PFR', ['pfr'], ['hands']], ['3-bet', ['threebet'], ['face_open']], ['F. steal', ['fold_steal'], ['vs_steal']], ['WTSD', ['wtsd'], ['saw_post']], ['F. river', ['FINALFOLD'], ['FINALFACE']]];
+    const val = (gs, num) => { let n = 0; for (const [g, a] of Object.entries(gs)) { if (!games.includes(g)) continue; for (const f of num) { if (f === 'FINALFOLD') n += a[FX['r' + FINAL(g) + '_fold_bet']]; else if (f === 'FINALFACE') n += a[FX['r' + FINAL(g) + '_face_bet']]; else n += a[FX[f]]; } } return n; };
+    const fmts = fmt === 'B' ? ['C', 'T'] : [fmt];
+    const pool = defs.map(([, num, den]) => { let nn = 0, dd = 0; for (const f of fmts) for (const gs of Object.values(state.by[f] || {})) { nn += val(gs, num); dd += val(gs, den); } return dd ? 100 * nn / dd : null; });
+    const sumv = (p, fl) => fmts.reduce((t, f) => t + val(((state.by[f] || {})[p]) || {}, fl), 0);
+    return {defs, pool, anyStud, player: p => ({hands: sumv(p, ['hands']), vals: defs.map(([, num, den]) => { const d = sumv(p, den); return d >= 15 ? 100 * sumv(p, num) / d : null; })})};
+  }
+  function fillGameSelect() {
+    const sel = $('tgame'); if (!state.gameTotals) return; const cur = T.game;
+    sel.replaceChildren(); const o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = 'All games (overall stats)'; sel.append(o0);
+    const gm = document.createElement('optgroup'); gm.label = 'Mixes'; MIXES.forEach(([v, lab]) => { const o = document.createElement('option'); o.value = v; o.textContent = lab; gm.append(o); }); sel.append(gm);
+    const gg = document.createElement('optgroup'); gg.label = 'Single games';
+    Object.entries(state.gameTotals).filter(([, n]) => n >= 1500).sort((a, b) => (GNAME[a[0]] || a[0]).localeCompare(GNAME[b[0]] || b[0])).forEach(([g]) => { const o = document.createElement('option'); o.value = g; o.textContent = GNAME[g] || g; gg.append(o); });
+    sel.append(gg); sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'all'; T.game = sel.value;
   }
   // pointer drag (mouse and touch)
   let drag = null;
@@ -483,6 +540,7 @@ details p { max-width: 75ch; color: var(--muted); }
   $('fmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); state.limit = 48; render(); }));
   $('sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
   $('nseats').addEventListener('change', e => { const n = +e.target.value; const keep = T.seats.filter(Boolean); T.n = n; T.seats = new Array(n - 1).fill(null); keep.slice(0, n - 1).forEach((p, i) => { T.seats[i] = p; }); saveSeats(); renderTable(); render(); });
+  $('tgame').addEventListener('change', e => { T.game = e.target.value; saveSeats(); renderTable(); });
   $('tfmt').addEventListener('change', e => { T.fmt = e.target.value; saveSeats(); renderTable(); });
   $('tclear').addEventListener('click', () => { T.seats = new Array(T.n - 1).fill(null); saveSeats(); renderTable(); render(); });
   $('more').addEventListener('click', () => { state.limit += 48; render(); });
