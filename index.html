@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phenom Scouting Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Plan: a card-room scouting binder. Felt green accent, brass for highlights, cool paper neutrals.
+   Layout: summary strip and upload panel on top, sticky filter bar, then a responsive grid of player cards. */
+:root {
+  --bg: #eef1ef; --paper: #fbfcfb; --ink: #17201c; --muted: #5d6a64; --line: #d5dcd8;
+  --felt: #1d6b4f; --felt-soft: #dcebe4; --brass: #a8781f; --brass-soft: #f4ead4;
+  --up: #b23a2e; --down: #2c5f9e;
+  --lag: #b23a2e; --lap: #b8791a; --tag: #1d6b4f; --tap: #4b5a73; --limp: #7a4aa0; --std: #6b756f;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  --radius: 14px; --shadow: 0 1px 2px rgba(20,40,30,.06), 0 6px 18px rgba(20,40,30,.06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1513; --paper: #17201c; --ink: #e8efeb; --muted: #9aa8a1; --line: #2a3631;
+  --felt: #4fb88d; --felt-soft: #1c3329; --brass: #d8a74a; --brass-soft: #33291a;
+  --up: #ec7b6f; --down: #7fa9e3;
+  --lag: #ec7b6f; --lap: #e0a54a; --tag: #4fb88d; --tap: #9aa9c4; --limp: #b892d8; --std: #9aa8a1;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1513; --paper: #17201c; --ink: #e8efeb; --muted: #9aa8a1; --line: #2a3631;
+  --felt: #4fb88d; --felt-soft: #1c3329; --brass: #d8a74a; --brass-soft: #33291a;
+  --up: #ec7b6f; --down: #7fa9e3;
+  --lag: #ec7b6f; --lap: #e0a54a; --tag: #4fb88d; --tap: #9aa9c4; --limp: #b892d8; --std: #9aa8a1;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 22px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4vw, 42px); line-height: 1.05; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; margin: 8px 0 0; }
+.suits { color: var(--felt); font-size: 14px; letter-spacing: .3em; }
+.top { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+@media (max-width: 860px) { .top { grid-template-columns: 1fr; } }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+@media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.tile b { display: block; font-family: var(--display); font-size: 24px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--muted); font-size: 12.5px; }
+.upload { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--felt); background: var(--felt-soft); }
+.btn { font: 600 14px var(--body); border-radius: 10px; padding: 9px 16px; border: 1px solid var(--felt); background: var(--felt); color: #fff; cursor: pointer; }
+:root[data-theme="dark"] .btn { color: #0f1513; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #0f1513; } }
+.btn.ghost { background: transparent; color: var(--felt); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+.status { font-size: 13.5px; min-height: 1.5em; }
+.send { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.sendrow { display: flex; flex-wrap: wrap; gap: 8px; }
+a.btn { text-decoration: none; display: inline-block; }
+.status.ok { color: var(--felt); } .status.err { color: var(--up); }
+.small { font-size: 12.5px; color: var(--muted); margin: 0; }
+.bar { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); padding: 10px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
+.search { flex: 1 1 280px; min-width: 0; font: 15px var(--body); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper); }
+.seg button { font: 500 13.5px var(--body); padding: 8px 12px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--felt); color: #fff; }
+.sel { font: 14px var(--body); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12.5px var(--body); border-radius: 999px; padding: 5px 11px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.count { color: var(--muted); font-size: 13px; margin-left: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+@media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+.card .stripe { height: 5px; background: var(--std); }
+.card .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+.card .head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.card .name { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; word-break: break-word; }
+.pill { font: 600 11.5px var(--body); letter-spacing: .02em; padding: 4px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.note { background: var(--brass-soft); border-left: 3px solid var(--brass); border-radius: 8px; padding: 9px 11px; font-size: 13.5px; margin: 0; }
+.fmt { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.fmt h3 { margin: 0; font: 600 11.5px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
+.meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; }
+.meter span { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+.meter span b { font: 500 12px var(--mono); color: var(--ink); }
+.track { position: relative; height: 6px; border-radius: 3px; background: var(--line); margin-top: 4px; }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--felt); }
+.track .pool { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--ink); opacity: .55; }
+.reads { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.reads li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 13.5px; line-height: 1.35; }
+.reads .arr { font-weight: 700; text-align: center; }
+.reads .arr.u { color: var(--up); } .reads .arr.d { color: var(--down); }
+.reads small { display: block; color: var(--muted); font-size: 11.5px; font-family: var(--mono); }
+.none { color: var(--muted); font-size: 13px; margin: 0; }
+.more { align-self: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.legend .t { display: inline-block; width: 2px; height: 12px; background: var(--ink); opacity: .55; vertical-align: middle; margin-right: 6px; }
+.mytable { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.mt-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mt-head h2 { margin-right: auto; }
+.seat-in { font: 14px var(--body); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; flex: 0 1 240px; }
+.tw { overflow-x: auto; }
+table.mt { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+table.mt th { text-align: left; font: 600 11.5px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.mt td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.mt td.n, table.mt th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.mt td.hi { color: var(--up); font-weight: 600; } table.mt td.lo { color: var(--down); font-weight: 600; }
+table.mt td.rd { min-width: 260px; font-size: 12.5px; line-height: 1.35; }
+table.mt .who { font-weight: 600; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; font: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); cursor: pointer; width: 28px; height: 28px; }
+.mt-empty { color: var(--muted); margin: 0; }
+.seatbtn { font: 600 12px var(--body); border-radius: 8px; padding: 5px 10px; border: 1px solid var(--felt); background: transparent; color: var(--felt); cursor: pointer; white-space: nowrap; }
+.seatbtn[aria-pressed="true"] { background: var(--felt); color: var(--paper); }
+.headr { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.card.seated { outline: 2px solid var(--felt); outline-offset: -1px; }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); }
+.tab { font: 600 14px var(--body); color: var(--muted); text-decoration: none; padding: 10px 14px; border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 8px; align-items: center; }
+.tab[aria-current="page"] { color: var(--ink); border-bottom-color: var(--felt); }
+.tab:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+.badge { background: var(--felt); color: var(--paper); border-radius: 999px; font-size: 11.5px; padding: 1px 8px; }
+.tablebar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-end; }
+.tablebar p { max-width: 60ch; margin: 4px 0 0; }
+.tbctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.felt-wrap { padding: 8px 0 4px; }
+.felt { position: relative; width: 100%; aspect-ratio: 16 / 9.4; min-height: 560px; }
+.felt::before { content: ""; position: absolute; inset: 14% 12%; border-radius: 50% / 50%; background: radial-gradient(ellipse at 50% 40%, #2b8a63, #1d6b4f 55%, #134a37); box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
+.felt .rail { position: absolute; inset: calc(14% - 12px) calc(12% - 12px); border-radius: 50% / 50%; border: 12px solid #6b4a2b; box-shadow: 0 8px 24px rgba(0,0,0,.18); pointer-events: none; }
+.felt-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.22); font-size: 28px; letter-spacing: .5em; pointer-events: none; }
+.seat { position: absolute; transform: translate(-50%, -50%); width: 224px; z-index: 1; }
+.seat .num { position: absolute; top: -11px; left: 12px; z-index: 2; background: var(--ink); color: var(--paper); font: 600 11px var(--mono); border-radius: 999px; padding: 2px 8px; }
+.seat.drop-target > .scard, .seat.drop-target > .sempty { outline: 3px dashed var(--brass); outline-offset: 3px; }
+.sempty { background: color-mix(in srgb, var(--paper) 85%, transparent); border: 2px dashed var(--line); border-radius: 12px; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.sempty input { font: 13px var(--body); padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); width: 100%; }
+.sempty .me { font: 600 12px var(--body); background: none; border: 0; color: var(--felt); cursor: pointer; padding: 0; text-align: left; }
+.sme { background: var(--brass-soft); border: 2px solid var(--brass); border-radius: 12px; padding: 16px 12px 10px; text-align: center; font-weight: 600; }
+.sme button { display: block; margin: 4px auto 0; font: 12px var(--body); background: none; border: 0; color: var(--muted); cursor: pointer; text-decoration: underline; }
+.scard { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.scard .grip { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 12px 10px 6px 12px; cursor: grab; touch-action: none; user-select: none; border-top: 4px solid var(--std); }
+.scard .grip:active { cursor: grabbing; }
+.scard .sn { font: 700 15px var(--display); word-break: break-word; line-height: 1.15; }
+.scard .x { background: none; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); cursor: pointer; width: 24px; height: 24px; flex-shrink: 0; }
+.scard .sb { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.scard .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.scard .pill { font-size: 10.5px; padding: 2px 7px; }
+.scard .mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 6px; font-size: 11px; color: var(--muted); }
+.scard .mini b { display: block; font: 500 13px var(--mono); color: var(--ink); }
+.scard .mini b.hi { color: var(--up); } .scard .mini b.lo { color: var(--down); }
+.scard .sr { font-size: 11.5px; line-height: 1.3; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.scard select { font: 11.5px var(--body); padding: 3px 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.ghost-card { position: fixed; z-index: 50; pointer-events: none; width: 224px; opacity: .92; transform: rotate(-2deg); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
+.seat.lifting > .scard { opacity: .35; }
+.tnote { margin-top: 0; }
+@media (max-width: 760px) {
+  .felt { aspect-ratio: auto; min-height: 0; display: flex; flex-direction: column; gap: 18px; padding-top: 6px; }
+  .felt::before, .felt .rail, .felt-logo { display: none; }
+  .seat { position: relative; transform: none; width: 100%; left: auto !important; top: auto !important; }
+  .ghost-card { width: min(90vw, 360px); }
+}
+details { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { max-width: 75ch; color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.empty { text-align: center; color: var(--muted); padding: 40px 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" aria-label="Views">
+    <a href="#cards" id="tab-cards" class="tab" aria-current="page">Player cards</a>
+    <a href="#table" id="tab-table" class="tab">My table <span class="badge" id="seatcount" hidden></span></a>
+  </nav>
+  <div id="view-cards">
+  <header class="top">
+    <div>
+      <div class="suits" aria-hidden="true">♠ ♥ ♦ ♣</div>
+      <h1>Phenom Scouting Cards</h1>
+      <p class="lede">Tendencies for every Phenom Poker mixed-game regular with 50+ hands in the pool. Each read is a stat where the player stands out from everyone else, with the numbers behind it. Cash and tournament play are scored separately.</p>
+      <div class="tiles" id="tiles">
+        <div class="tile"><b id="t-players">–</b><span>players with cards</span></div>
+        <div class="tile"><b id="t-hands">–</b><span>hands in the pool</span></div>
+        <div class="tile"><b id="t-contrib">–</b><span>contributions merged</span></div>
+        <div class="tile"><b id="t-latest">–</b><span>latest hand</span></div>
+      </div>
+    </div>
+    <section class="upload" id="upload" aria-labelledby="up-h">
+      <h2 id="up-h">Add your hand histories</h2>
+      <div class="drop" id="drop">
+        <p style="margin:0 0 10px">Drop Phenom hand-history .txt files here (cash or tournament)</p>
+        <label class="btn" for="file" id="pick">Choose files</label>
+        <input type="file" id="file" accept=".txt,text/plain" multiple hidden>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <div class="send" id="send" hidden>
+        <p style="margin:0"><b>Step 2.</b> Download your contribution file, then add it on GitHub. The cards update for everyone once it is merged.</p>
+        <div class="sendrow">
+          <button type="button" class="btn" id="dl">Download contribution file</button>
+          <a class="btn ghost" id="gh" href="#" target="_blank" rel="noopener">Add it on GitHub</a>
+        </div>
+        <p class="small">Adding it on GitHub needs a free GitHub account: drag the file onto the page that opens and press "Propose changes". No account? Send the file to the site owner instead.</p>
+      </div>
+      <p class="small">Your file is read in your browser and never leaves your computer. The contribution file keeps only counts of what your opponents did in each hand: no hole cards, no chip amounts, and not your screen name (the page drops the player whose cards the file shows). Hands already in the pool are skipped.</p>
+    </section>
+  </header>
+
+  <div class="bar" role="search">
+    <input class="search" id="q" type="search" placeholder="Search a player, game or read: snow, limps, Badugi…" aria-label="Search players">
+    <div class="seg" id="fmt" role="group" aria-label="Format">
+      <button type="button" data-v="all" aria-pressed="true">All</button>
+      <button type="button" data-v="cash" aria-pressed="false">Cash</button>
+      <button type="button" data-v="tour" aria-pressed="false">Tournaments</button>
+    </div>
+    <select class="sel" id="sort" aria-label="Sort by">
+      <option value="hands">Most hands</option>
+      <option value="last">Seen most recently</option>
+      <option value="reads">Most reads</option>
+      <option value="name">Name A–Z</option>
+    </select>
+    <div class="chips" id="styles" role="group" aria-label="Style"></div>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="legend"><span><span class="t"></span>pool average</span><span><b style="color:var(--up)">▲</b> above the pool</span><span><b style="color:var(--down)">▼</b> below the pool</span></div>
+
+  <main class="grid" id="grid" aria-live="polite"></main>
+  <button type="button" class="btn ghost more" id="more" hidden>Show more players</button>
+
+  </div>
+  <div id="view-table" hidden>
+    <section class="tablebar" aria-label="Table setup">
+      <div>
+        <h2>My table</h2>
+        <p class="small">Seat the players you're sitting with, then drag cards to the seats they're in. Seat 1 is at the top and numbers run clockwise. Your table is saved in this browser.</p>
+      </div>
+      <div class="tbctl">
+        <label class="small" for="nseats">Seats</label>
+        <select class="sel" id="nseats"><option value="2">2 (heads-up)</option><option value="6" selected>6-max</option><option value="8">8</option><option value="9">9</option></select>
+        <select class="sel" id="tfmt" aria-label="Stats to show"><option value="auto">Cash stats, else tournament</option><option value="cash">Cash stats</option><option value="tour">Tournament stats</option></select>
+        <button type="button" class="btn ghost" id="tclear">Clear table</button>
+      </div>
+    </section>
+    <div class="felt-wrap"><div class="felt" id="felt" aria-label="Poker table"><div class="rail"></div><div class="felt-logo" aria-hidden="true">♠ ♥ ♦ ♣</div></div></div>
+    <datalist id="plist"></datalist>
+    <p class="small tnote">Red numbers are well above the pool, blue well below. Drag a card by its name bar, or use its seat menu.</p>
+  </div>
+  <details>
+    <summary>How the cards are made</summary>
+    <p>Every uploaded hand is read in the uploader's browser. For each opponent the page counts what they did (entered the pot, raised first in, 3-bet, folded to a steal, folded to bets on each draw or street, stood pat, showed down). A read appears when a player's rate is far enough from everyone else's on the same chances that it is unlikely to be luck: a z-score of 2.5 or more on at least 25 chances, the top five per format. Preflop numbers pool the blind games; WTSD and fold-to-river pool 2-7 Triple Draw, A-5 Triple Draw, Badugi and Badeucy. "Shown weak" rates only see hands that reached showdown. Style compares a player's VPIP with the pool's and their PFR with their VPIP, on 100+ hands. With a few hundred hands, treat a read as a lean, not a rule.</p>
+    <p>Notes in gold were written by hand for a few regulars and do not update with new uploads.</p>
+  </details>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  const E = window.PhenomEngine;
+  const REPO = 'aatrain23/phenom-scouting'; // owner/name of this site's GitHub repo
+  const BLOCKED = new Set(['6cf0013eecada8aa15f90306e4c580c152a3fb637512aeefa78ce919eb10d079']);
+  const NOTES = {
+    'Gabberdisco': 'Folds to river bets far more than the pool and usually folds when a pat hand bets into his draw: snow and bluff the end. Open-limps a lot in 2-7 Razz.',
+    'Ridiculous': 'Omaha Hi/Lo maniac: very high raise, 3-bet and steal rates and rarely folds his blind. Build pots with hands that can scoop and let him bet; do not steal his blind with one-way hands.',
+    'Meowza': 'Sticky: goes to showdown a lot, folds few river bets and rarely folds the 2nd draw. Value-bet thin and skip snows and river bluffs. Strong in 2-7 Razz.',
+    'XXXPLOTACION': 'Aggressive in 2-7 Single Draw. In triple draw he snows far more than anyone and check-raises often: call his pat bets wider, but he folds to 1st-draw bets often, so bet the flop.',
+    'Jenn': 'Tight preflop and folds to 2nd-draw bets about twice as often as the pool: barrel the turn with the draw lead and steal her blinds.',
+    'ChinoAntrax57': 'In Badugi he plays wide and rarely folds to a pat river bet: do not snow him, value-bet badugis and strong 3-card hands. In triple draw his river bets are almost never bluffs: fold more to them.',
+    'dreadknight4444': 'Preflop maniac: raises about half his hands, 3-bets a lot and rarely folds his blind. Cap one-card draws against his 3-bets, do not steal his blind with junk, call down wider; he rarely folds the 2nd draw.',
+    'elastic': 'Calling station in the draw games: rarely folds the river and wins few showdowns. Never bluff or snow; value-bet thin.',
+    'hntr': 'Snows and bluffs more than most: bluff-catch his pat bets wider. Folds the 2nd draw in Badugi often, so keep barreling there.',
+    'PhoenixReborn': 'Maniac: very high raise, 3-bet and steal rates and lots of check-raises; rarely folds the river. Widen capping and calling ranges, value-bet thinner.',
+    'Kesslercut': 'Strong regular. In Badugi he often checks when drawing fewer cards, so his check is not weakness. Folds a bit more than most on the 1st and 2nd draw.',
+    'LuckntSkill': 'Strong, tight player who rarely reaches showdown and almost never bluffs the river in triple draw: fold to his river bets, bluff him more.',
+    'Perseus': 'Folds the 2nd draw well above the pool and rarely reaches showdown: keep betting the turn with the draw lead.',
+    'tRaMSt0p': 'Passive nit: rarely raises, steals or 3-bets and folds the river often. Steal his blinds and bluff the end; believe his raises.',
+    'Mrzero': 'Limp-caller: open-limps a lot, rarely raises, often skips betting his draw lead and folds to 1st-draw bets often. Raise his limps and bet the flop.',
+    'GOFF': 'Limper who plays most hands: isolate his limps with raises.',
+    'Lcrost': 'Limps a lot and plays most hands, but usually folds to a pat river bet: isolate and snow him.',
+    'BearHeart': 'Nit: plays few hands and rarely raises. Steal his blinds and respect his raises and check-raises.'
+  };
+  const STYLES = [['Loose-aggressive', '--lag'], ['Loose-passive', '--lap'], ['Tight-aggressive', '--tag'], ['Tight-passive', '--tap'], ['Limper', '--limp'], ['Standard', '--std']];
+  const styleVar = Object.fromEntries(STYLES);
+  const $ = id => document.getElementById(id);
+  const fI = n => n == null ? '–' : Number(n).toLocaleString('en-US');
+  const state = {acc: E.empty(), ids: new Set(), rows: [], pool: {C: {}, T: {}}, baseHands: 0, extraHands: 0, uploads: 0, limit: 48, fmt: 'all', styles: new Set(), q: '', sort: 'hands', seated: []};
+  try { const sv = JSON.parse(localStorage.getItem('phenom-table') || '[]'); if (Array.isArray(sv)) state.seated = sv.slice(0, 10); } catch (e) {}
+
+  // ---------- data ----------
+  function poolRates(acc) {
+    const BL = ['27TD','A5TD','Badugi','Badeucy','O8','Badacey','2-7 Single Draw No',"Hold'em","Hold'em No",'Omaha Pot','Dramaha 2-7','Dramaha High','5 Card Omaha Hi/Lo Pot','FLO/DB'];
+    const DR = ['27TD','A5TD','Badugi','Badeucy']; const F = Object.fromEntries(E.FIELDS.map((f, i) => [f, i]));
+    const defs = {vpip: [BL, 'vpip', 'hands'], pfr: [BL, 'pfr', 'hands'], '3bet': [BL, 'threebet', 'face_open'], fold_steal: [BL, 'fold_steal', 'vs_steal'], wtsd: [DR, 'wtsd', 'saw_post'], fold_river: [DR, 'r3_fold_bet', 'r3_face_bet']};
+    const out = {C: {}, T: {}};
+    for (const fmt of ['C', 'T']) for (const [k, [gs, n, d]] of Object.entries(defs)) {
+      let nn = 0, dd = 0; const set = new Set(gs);
+      for (const [key, v] of Object.entries(acc.counts)) { if (key[0] !== fmt) continue; const g = key.slice(key.lastIndexOf('|') + 1); if (set.has(g)) { nn += v[F[n]]; dd += v[F[d]]; } }
+      out[fmt][k] = dd ? 100 * nn / dd : null;
+    }
+    return out;
+  }
+  function rebuild() {
+    state.rows = E.buildCards(state.acc, NOTES);
+    state.pool = poolRates(state.acc);
+    $('t-players').textContent = fI(state.rows.length);
+    $('t-hands').textContent = fI(state.baseHands + state.extraHands);
+    $('t-contrib').textContent = fI(state.uploads);
+    const latest = Object.values(state.acc.last).reduce((m, d) => d > m ? d : m, '');
+    $('t-latest').textContent = latest ? new Date(latest + 'T12:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : '–';
+    render();
+  }
+
+  // ---------- render ----------
+  function filtered() {
+    const q = state.q.trim().toLowerCase();
+    let rows = state.rows.filter(r => {
+      if (state.fmt === 'cash' && !(r.cash_hands >= 50)) return false;
+      if (state.fmt === 'tour' && !(r.tour_hands >= 50)) return false;
+      const st = state.fmt === 'tour' ? (r.tour_style || r.style) : state.fmt === 'cash' ? (r.cash_style || r.style) : r.style;
+      if (state.styles.size && !state.styles.has(st)) return false;
+      if (!q) return true;
+      const reads = [...(r.cash_reads || []), ...(r.tour_reads || [])].map(x => x.text + ' ' + x.stat + ' ' + x.games).join(' ');
+      return (r.player + ' ' + r.main_games + ' ' + r.note + ' ' + reads + ' ' + st).toLowerCase().includes(q);
+    });
+    const nReads = r => (r.cash_reads || []).length + (r.tour_reads || []).length;
+    const cmp = {hands: (a, b) => (b.cash_hands + b.tour_hands) - (a.cash_hands + a.tour_hands), last: (a, b) => String(b.last_seen).localeCompare(String(a.last_seen)), reads: (a, b) => nReads(b) - nReads(a), name: (a, b) => a.player.localeCompare(b.player)}[state.sort];
+    return rows.slice().sort(cmp);
+  }
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function meter(label, v, pool) {
+    const m = el('div', 'meter'); const s = el('span'); s.append(document.createTextNode(label)); s.append(el('b', null, v == null ? '–' : v.toFixed(0) + '%')); m.append(s);
+    const t = el('div', 'track'); if (v != null) { const f = el('div', 'fill'); f.style.width = Math.min(100, v) + '%'; t.append(f); }
+    if (pool != null) { const p = el('div', 'pool'); p.style.left = 'calc(' + Math.min(100, pool) + '% - 1px)'; p.title = 'Pool ' + pool.toFixed(0) + '%'; t.append(p); }
+    m.append(t); return m;
+  }
+  function block(r, k, title) {
+    if (!(r[k + '_hands'] >= 50)) return null;
+    const fmt = k === 'cash' ? 'C' : 'T'; const P = state.pool[fmt];
+    const b = el('section', 'fmt'); const h = el('h3'); h.append(el('span', null, title + ' · ' + fI(r[k + '_hands']) + ' hands')); h.append(el('span', null, r[k + '_style'] || '')); b.append(h);
+    const ms = el('div', 'meters');
+    [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['Fold to steal', 'fold_steal'], ['WTSD', 'wtsd'], ['Fold river', 'fold_river']].forEach(([lab, f]) => ms.append(meter(lab, r[k + '_' + f], P[f])));
+    b.append(ms);
+    const reads = r[k + '_reads'] || [];
+    if (reads.length) {
+      const ul = el('ul', 'reads');
+      reads.forEach(x => { const li = el('li'); li.append(el('span', 'arr ' + (x.dir > 0 ? 'u' : 'd'), x.dir > 0 ? '▲' : '▼')); const t = el('div', null, x.text); t.append(el('small', null, x.stat + ' ' + x.val + '% vs ' + x.pool + '% · ' + x.games)); li.append(t); ul.append(li); });
+      b.append(ul);
+    } else b.append(el('p', 'none', 'Nothing stands out from the pool yet.'));
+    return b;
+  }
+  function card(r) {
+    const c = el('article', 'card'); c.id = 'p-' + r.player.replace(/[^A-Za-z0-9_-]/g, '_');
+    const st = state.fmt === 'tour' ? (r.tour_style || r.style) : state.fmt === 'cash' ? (r.cash_style || r.style) : r.style;
+    const col = 'var(' + (styleVar[st] || '--std') + ')';
+    const stripe = el('div', 'stripe'); stripe.style.background = col; c.append(stripe);
+    const body = el('div', 'body');
+    const head = el('div', 'head'); head.append(el('div', 'name', r.player)); const hr = el('div', 'headr'); const pill = el('span', 'pill', st); pill.style.color = col; hr.append(pill); const sb = el('button', 'seatbtn', seatedHas(r.player) ? 'Seated' : '+ Seat'); sb.type = 'button'; sb.setAttribute('aria-pressed', seatedHas(r.player)); sb.setAttribute('aria-label', (seatedHas(r.player) ? 'Remove ' : 'Seat ') + r.player + (seatedHas(r.player) ? ' from your table' : ' at your table')); sb.addEventListener('click', () => toggleSeat(r.player)); hr.append(sb); head.append(hr); body.append(head); if (seatedHas(r.player)) c.classList.add('seated');
+    const meta = el('div', 'meta');
+    if (r.cash_hands) { const s = el('span'); s.append(el('b', null, fI(r.cash_hands))); s.append(document.createTextNode(' cash')); meta.append(s); }
+    if (r.tour_hands) { const s = el('span'); s.append(el('b', null, fI(r.tour_hands))); s.append(document.createTextNode(' tournament')); meta.append(s); }
+    meta.append(el('span', null, 'last seen ' + (r.last_seen ? new Date(r.last_seen + 'T12:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : '–')));
+    body.append(meta);
+    body.append(el('div', 'meta', r.main_games));
+    if (r.note) body.append(el('p', 'note', r.note));
+    if (state.fmt !== 'tour') { const b = block(r, 'cash', 'Cash'); if (b) body.append(b); }
+    if (state.fmt !== 'cash') { const b = block(r, 'tour', 'Tournaments'); if (b) body.append(b); }
+    c.append(body); return c;
+  }
+  // ---------- my table ----------
+  const T = {n: 6, seats: new Array(6).fill(null), fmt: 'auto'};
+  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.slice(0, T.n); while (T.seats.length < T.n) T.seats.push(null); T.fmt = sv.fmt || 'auto'; } } catch (e) {}
+  if (Array.isArray(state.seated) && state.seated.length && T.seats.every(x => !x)) state.seated.slice(0, T.n).forEach((p, i) => { T.seats[i] = p; });
+  function saveSeats() { try { localStorage.setItem('phenom-seats', JSON.stringify(T)); } catch (e) {} }
+  function seatedHas(p) { return T.seats.includes(p); }
+  function toggleSeat(p) {
+    const i = T.seats.indexOf(p);
+    if (i >= 0) T.seats[i] = null;
+    else { const j = T.seats.indexOf(null); if (j < 0) { status('Your table is full. Remove a player or add seats on the My table page.', 'err'); return; } T.seats[j] = p; }
+    saveSeats(); render();
+  }
+  function seatPos(i, n) {
+    const ang = (-90 + (n === 2 ? 0 : 360 / n / 2) + 360 * i / n) * Math.PI / 180;
+    const a = ang - (n === 2 ? Math.PI / 2 : 0);
+    return {x: 50 + 41 * Math.cos(n === 2 ? (i === 0 ? -Math.PI / 2 : Math.PI / 2) : a), y: 50 + 39 * Math.sin(n === 2 ? (i === 0 ? -Math.PI / 2 : Math.PI / 2) : a)};
+  }
+  function seatCard(r, i) {
+    const k = T.fmt === 'tour' ? 'tour' : T.fmt === 'cash' ? 'cash' : (r.cash_hands >= 50 ? 'cash' : 'tour');
+    const P = state.pool[k === 'cash' ? 'C' : 'T']; const st = r[k + '_style'] || r.style; const col = 'var(' + (styleVar[st] || '--std') + ')';
+    const c = el('div', 'scard');
+    const g = el('div', 'grip'); g.style.borderTopColor = col; g.dataset.seat = i; g.title = 'Drag to another seat';
+    g.append(el('span', 'sn', r.player));
+    const x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove ' + r.player + ' from seat ' + (i + 1)); x.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); render(); }); x.addEventListener('pointerdown', e => e.stopPropagation());
+    g.append(x); c.append(g);
+    const b = el('div', 'sb');
+    const row = el('div', 'row'); const pill = el('span', 'pill', st); pill.style.color = col; row.append(pill); row.append(el('span', null, fI(r[k + '_hands']) + ' ' + (k === 'cash' ? 'cash' : 'tourn.') + ' hands')); b.append(row);
+    const mini = el('div', 'mini');
+    [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['F. steal', 'fold_steal'], ['WTSD', 'wtsd'], ['F. river', 'fold_river']].forEach(([lab, f]) => { const v = r[k + '_' + f], pv = P[f]; const d = el('div'); d.append(document.createTextNode(lab)); const bb = el('b', null, v == null ? '–' : v.toFixed(0) + '%'); if (v != null && pv != null) { if (v - pv >= 8) bb.className = 'hi'; else if (pv - v >= 8) bb.className = 'lo'; bb.title = 'Pool ' + pv.toFixed(0) + '%'; } d.append(bb); mini.append(d); });
+    b.append(mini);
+    const reads = (r[k + '_reads'] || []).slice(0, 2); const ul = el('ul', 'sr');
+    if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
+    b.append(ul);
+    const mv = el('select'); mv.setAttribute('aria-label', 'Move ' + r.player + ' to seat');
+    for (let s2 = 0; s2 < T.n; s2++) { const o = document.createElement('option'); o.value = s2; o.textContent = 'Seat ' + (s2 + 1) + (s2 === i ? ' (here)' : T.seats[s2] ? ' (swap)' : ''); if (s2 === i) o.selected = true; mv.append(o); }
+    mv.addEventListener('change', () => moveSeat(i, +mv.value)); mv.addEventListener('pointerdown', e => e.stopPropagation());
+    b.append(mv); c.append(b);
+    return c;
+  }
+  function moveSeat(from, to) { if (from === to || to < 0 || to >= T.n) return; const t = T.seats[to]; T.seats[to] = T.seats[from]; T.seats[from] = t; saveSeats(); renderTable(); }
+  function renderTable() {
+    const filled = T.seats.filter(x => x && x !== '__me__').length; const sc = $('seatcount'); sc.hidden = !filled; sc.textContent = filled;
+    if ($('view-table').hidden) return;
+    $('nseats').value = String(T.n); $('tfmt').value = T.fmt;
+    const byName = new Map(state.rows.map(r => [r.player, r]));
+    const felt = $('felt'); felt.querySelectorAll('.seat').forEach(n => n.remove());
+    T.seats.forEach((p, i) => {
+      const pos = seatPos(i, T.n); const s2 = el('div', 'seat'); s2.dataset.seat = i; s2.style.left = pos.x + '%'; s2.style.top = pos.y + '%';
+      s2.append(el('span', 'num', 'Seat ' + (i + 1)));
+      if (p === '__me__') { const m = el('div', 'sme', 'You'); const u = el('button', null, 'Not my seat'); u.type = 'button'; u.addEventListener('click', () => { T.seats[i] = null; saveSeats(); renderTable(); }); m.append(u); s2.append(m); }
+      else if (p && byName.get(p)) s2.append(seatCard(byName.get(p), i));
+      else {
+        if (p && !byName.get(p) && state.rows.length) T.seats[i] = null;
+        const e2 = el('div', 'sempty'); const inp = document.createElement('input'); inp.setAttribute('list', 'plist'); inp.placeholder = 'Add a player'; inp.id = 'seat-in-' + i; inp.setAttribute('aria-label', 'Player in seat ' + (i + 1));
+        inp.addEventListener('change', () => { const r = state.rows.find(x2 => x2.player.toLowerCase() === inp.value.trim().toLowerCase()); if (!r) { inp.setCustomValidity('No card for that name'); inp.reportValidity(); return; } const old = T.seats.indexOf(r.player); if (old >= 0) T.seats[old] = null; T.seats[i] = r.player; saveSeats(); renderTable(); render(); });
+        e2.append(inp);
+        if (!T.seats.includes('__me__')) { const me = el('button', 'me', 'This is my seat'); me.type = 'button'; me.addEventListener('click', () => { T.seats[i] = '__me__'; saveSeats(); renderTable(); }); e2.append(me); }
+        s2.append(e2);
+      }
+      felt.append(s2);
+    });
+    const dl = $('plist'); if (dl.childElementCount !== state.rows.length) { dl.replaceChildren(); state.rows.forEach(r => { const o = document.createElement('option'); o.value = r.player; dl.append(o); }); }
+  }
+  // pointer drag (mouse and touch)
+  let drag = null;
+  document.addEventListener('pointerdown', e => {
+    const g = e.target.closest && e.target.closest('.grip'); if (!g || !$('felt').contains(g)) return;
+    e.preventDefault(); const from = +g.dataset.seat; const seatEl = g.closest('.seat');
+    const ghost = seatEl.querySelector('.scard').cloneNode(true); ghost.classList.add('ghost-card'); document.body.append(ghost);
+    const rect = seatEl.getBoundingClientRect(); drag = {from, ghost, dx: e.clientX - rect.left, dy: e.clientY - rect.top, seatEl, over: null};
+    seatEl.classList.add('lifting'); moveGhost(e);
+    try { g.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  function moveGhost(e) {
+    if (!drag) return; drag.ghost.style.left = (e.clientX - drag.dx) + 'px'; drag.ghost.style.top = (e.clientY - 14) + 'px';
+    const under = document.elementFromPoint(e.clientX, e.clientY); const s2 = under && under.closest ? under.closest('#felt .seat') : null;
+    if (drag.over && drag.over !== s2) drag.over.classList.remove('drop-target');
+    if (s2 && s2 !== drag.seatEl) { s2.classList.add('drop-target'); drag.over = s2; } else drag.over = null;
+  }
+  document.addEventListener('pointermove', e => { if (drag) { e.preventDefault(); moveGhost(e); } }, {passive: false});
+  const endDrag = e => { if (!drag) return; const d = drag; drag = null; d.ghost.remove(); d.seatEl.classList.remove('lifting'); if (d.over) { d.over.classList.remove('drop-target'); moveSeat(d.from, +d.over.dataset.seat); } };
+  document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
+  // routing
+  function route() {
+    const tbl = location.hash === '#table';
+    $('view-cards').hidden = tbl; $('view-table').hidden = !tbl;
+    $('tab-cards').setAttribute('aria-current', tbl ? 'false' : 'page'); $('tab-table').setAttribute('aria-current', tbl ? 'page' : 'false');
+    document.querySelectorAll('.bar, .legend, #grid, #more').forEach(n => { n.style.display = tbl ? 'none' : ''; });
+    renderTable();
+  }
+  window.addEventListener('hashchange', route);
+  function render() {
+    renderTable();
+    const rows = filtered(); const g = $('grid'); g.replaceChildren();
+    rows.slice(0, state.limit).forEach(r => g.append(card(r)));
+    if (!rows.length) g.append(el('p', 'empty', state.rows.length ? 'No players match. Try a shorter search or clear the style filter.' : 'Loading players…'));
+    $('count').textContent = rows.length ? 'Showing ' + fI(Math.min(rows.length, state.limit)) + ' of ' + fI(rows.length) : '';
+    $('more').hidden = rows.length <= state.limit;
+  }
+
+  // ---------- controls ----------
+  STYLES.forEach(([s, v]) => { const b = el('button', 'chip'); b.type = 'button'; b.setAttribute('aria-pressed', 'false'); const i = el('i'); i.style.background = 'var(' + v + ')'; b.append(i, document.createTextNode(s)); b.addEventListener('click', () => { if (state.styles.has(s)) state.styles.delete(s); else state.styles.add(s); b.setAttribute('aria-pressed', state.styles.has(s)); state.limit = 48; render(); }); $('styles').append(b); });
+  let qt; $('q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; state.limit = 48; render(); }, 120); });
+  $('fmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); state.limit = 48; render(); }));
+  $('sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
+  $('nseats').addEventListener('change', e => { const n = +e.target.value; const keep = T.seats.filter(Boolean); T.n = n; T.seats = new Array(n).fill(null); keep.slice(0, n).forEach((p, i) => { T.seats[i] = p; }); saveSeats(); renderTable(); render(); });
+  $('tfmt').addEventListener('change', e => { T.fmt = e.target.value; saveSeats(); renderTable(); });
+  $('tclear').addEventListener('click', () => { T.seats = new Array(T.n).fill(null); saveSeats(); renderTable(); render(); });
+  $('more').addEventListener('click', () => { state.limit += 48; render(); });
+
+  // ---------- upload ----------
+  const status = (msg, cls) => { const s = $('status'); s.textContent = msg; s.className = 'status' + (cls ? ' ' + cls : ''); };
+  async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.toLowerCase())); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  async function retry(fn) { try { return await fn(); } catch (e) { if (e && e.code === 'unavailable') { await wait(600 + Math.random() * 600); return fn(); } throw e; } }
+  function chunkObj(obj, maxBytes) {
+    const out = []; let cur = {}, size = 2;
+    for (const [k, v] of Object.entries(obj)) { const s = JSON.stringify(k).length + JSON.stringify(v).length + 2; if (size + s > maxBytes && Object.keys(cur).length) { out.push(cur); cur = {}; size = 2; } cur[k] = v; size += s; }
+    if (Object.keys(cur).length) out.push(cur); return out;
+  }
+  function trim(arr) { let n = arr.length; while (n && !arr[n - 1]) n--; return arr.slice(0, n); }
+  let pending = null;
+  async function handleFiles(files) {
+    if (!files || !files.length) return;
+    $('send').hidden = true; pending = null;
+    try {
+      status('Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…');
+      let hands = [];
+      for (const f of files) { const text = await f.text(); hands = hands.concat(E.parse(text)); await wait(0); }
+      if (!hands.length) { status('No Phenom hands found in that file. Export hand histories from Phenom as .txt and try again.', 'err'); return; }
+      const fresh = []; const seen = new Set();
+      for (const h of hands) { if (state.ids.has(h.id) || seen.has(h.id)) continue; seen.add(h.id); fresh.push(h); }
+      if (!fresh.length) { status('All ' + fI(hands.length) + ' hands are already in the pool. Nothing new to add.', 'ok'); return; }
+      status('Counting ' + fI(fresh.length) + ' new hands…');
+      const names = new Set(); fresh.forEach(h => h.players.forEach(p => names.add(p)));
+      const blocked = new Set(); for (const n of names) if (BLOCKED.has(await sha(n))) blocked.add(n);
+      const out = []; const preview = E.empty();
+      for (const h of fresh) {
+        const one = E.empty(); E.count(h, one, p => p === h.hero || blocked.has(p));
+        const rows = {};
+        for (const [k, v] of Object.entries(one.counts)) { const sp = []; v.forEach((x, i) => { if (x) sp.push([i, x]); }); rows[k.slice(2)] = sp; }
+        if (Object.keys(rows).length) out.push([h.id, h.date, h.tourney ? 'T' : 'C', rows]);
+        E.merge(preview, one);
+      }
+      E.merge(state.acc, preview); fresh.forEach(h => state.ids.add(h.id)); state.extraHands += fresh.length;
+      rebuild();
+      pending = {format: 'phenom-scouting-contribution', version: 1, made: new Date().toISOString().slice(0, 10), hands: out};
+      $('gh').href = 'https://github.com/' + REPO + '/upload/main/contributions';
+      $('send').hidden = false;
+      status('Found ' + fI(fresh.length) + ' new hands' + (hands.length > fresh.length ? ' (' + fI(hands.length - fresh.length) + ' were already in the pool)' : '') + '. The cards below include them for you now.', 'ok');
+    } catch (e) {
+      status('Something went wrong reading that file. Make sure it is a Phenom hand-history .txt export.', 'err');
+    } finally { $('file').value = ''; }
+  }
+  $('dl').addEventListener('click', () => {
+    if (!pending) return;
+    const blob = new Blob([JSON.stringify(pending)], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'phenom-hands-' + pending.made + '-' + Math.random().toString(36).slice(2, 7) + '.json';
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  });
+  $('file').addEventListener('change', e => handleFiles([...e.target.files]));
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => handleFiles([...(e.dataTransfer && e.dataTransfer.files || [])]));
+
+  // ---------- load ----------
+  async function loadBase() {
+    try {
+      const [b, ids] = await Promise.all([fetch('data/base.json').then(r => r.json()), fetch('data/ids.json').then(r => r.json())]);
+      E.merge(state.acc, {counts: b.counts, last: b.last}); ids.forEach(id => state.ids.add(id)); state.baseHands = b.hands; state.uploads = b.contributions || 0;
+      rebuild();
+    } catch (e) { $('grid').replaceChildren(el('p', 'empty', 'The player data did not load. Reload the page to try again.')); }
+  }
+  route();
+  render();
+  loadBase();
+})();
+</script>
+</body>
+</html>
