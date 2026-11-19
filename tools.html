@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study tools · Phenom Scouting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1ef;--paper:#fbfcfb;--ink:#17201c;--muted:#5d6a64;--line:#d5dcd8;--felt:#1d6b4f;--felt-soft:#dcebe4;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;--body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --radius:14px;--shadow:0 1px 2px rgba(20,40,30,.06),0 6px 18px rgba(20,40,30,.06);
+  --surface:var(--paper);--accent:var(--felt);--accent-ink:#fff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1513;--paper:#17201c;--ink:#e8efeb;--muted:#9aa8a1;--line:#2a3631;--felt:#4fb88d;--felt-soft:#1c3329;--accent-ink:#0f1513;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1513;--paper:#17201c;--ink:#e8efeb;--muted:#9aa8a1;--line:#2a3631;--felt:#4fb88d;--felt-soft:#1c3329;--accent-ink:#0f1513;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:16px max(16px,4vw) 48px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{font:600 14px var(--body);color:var(--muted);text-decoration:none;padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--felt)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.05;margin:24px 0 8px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:20px;margin:0 0 6px}
+.lead{color:var(--muted);max-width:68ch;margin:0 0 24px}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.labs{display:grid;gap:14px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;text-decoration:none;color:inherit;display:block}
+.lab:hover,.lab:focus-visible{border-color:var(--felt);outline:none}
+.lab p{margin:0;color:var(--muted)}
+.lab .go{display:inline-block;margin-top:10px;font-weight:600;color:var(--felt)}
+.games{font-size:13px;color:var(--felt);font-weight:600;margin-bottom:4px}
+.note{font-size:13px;color:var(--muted);margin-top:14px}
+#calc{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+#calc #mxq{position:static;width:auto;box-shadow:none;border:0;padding-top:0;background:transparent}
+#calc #mxq header .x{display:none}
+#mxq-btn{display:none!important}
+#mxq input,#mxq select{font-size:16px!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" aria-label="Views">
+    <a href="./#cards" class="tab">Player cards</a>
+    <a href="./#table" class="tab">My table</a>
+    <a href="tools.html" class="tab" aria-current="page">Study tools</a>
+  </nav>
+  <h1>Study tools for mixed games</h1>
+  <p class="lead">An equity calculator for draw and stud games, plus trainers that deal full hands and grade every decision. The calculator runs here in your browser; the trainers open on Claude.</p>
+  <div class="cols">
+    <section id="calc" aria-label="Equity calculator"></section>
+    <div class="labs">
+      <a class="lab" href="https://claude.ai/artifact/1b2U9gYE4fAUZYHQims9Mz">
+        <div class="games">2-7 Triple Draw · Badugi</div><h2>Pre-Draw Lab</h2>
+        <p>Play full hands from the blinds to showdown. Every draw and bet is graded, with ranges, spots and a hand checker.</p><span class="go">Open the trainer →</span></a>
+      <a class="lab" href="https://claude.ai/artifact/1x5WhAQx6LTiDRqohVWLyW">
+        <div class="games">No-limit 2-7 Single Draw</div><h2>Single Draw Lab</h2>
+        <p>Opens, 3-bets, jams, draws and snows, graded against the reference ranges with a running grade report.</p><span class="go">Open the trainer →</span></a>
+      <a class="lab" href="https://claude.ai/artifact/BfD9fvpDABwDFd4Tj4Zy1m">
+        <div class="games">Stud · Stud 8 · Razz</div><h2>Stud Lab</h2>
+        <p>Full-hand drills with a street-by-street equity report against modeled opponent ranges and a third-street checker.</p><span class="go">Open the trainer →</span></a>
+      <p class="note">The calculator gives showdown equity if nobody folds. Draw games play future draws with simple pat and keep rules you can set per player.</p>
+    </div>
+  </div>
+</div>
+<script src="mixeq-panel.js"></script>
+<script>
+{ const box = document.getElementById('mxq'); document.getElementById('calc').append(box); box.hidden = false;
+  document.getElementById('mxq-btn').remove(); }
+</script>
+</body>
+</html>
