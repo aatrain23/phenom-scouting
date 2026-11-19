@@ -308,7 +308,7 @@ details p { max-width: 75ch; color: var(--muted); }
   function poolRates(acc) {
     const BL = ['27TD','A5TD','Badugi','Badeucy','O8','Badacey','2-7 Single Draw No',"Hold'em","Hold'em No",'Omaha Pot','Dramaha 2-7','Dramaha High','5 Card Omaha Hi/Lo Pot','FLO/DB'];
     const DR = ['27TD','A5TD','Badugi','Badeucy']; const F = Object.fromEntries(E.FIELDS.map((f, i) => [f, i]));
-    const defs = {vpip: [BL, 'vpip', 'hands'], pfr: [BL, 'pfr', 'hands'], '3bet': [BL, 'threebet', 'face_open'], fold_steal: [BL, 'fold_steal', 'vs_steal'], wtsd: [DR, 'wtsd', 'saw_post'], fold_river: [DR, 'r3_fold_bet', 'r3_face_bet']};
+    const defs = {vpip: [BL, 'vpip', 'hands'], pfr: [BL, 'pfr', 'hands'], '3bet': [BL, 'threebet', 'face_open'], fold_steal: [BL, 'fold_steal', 'vs_steal'], wtsd: [DR, 'wtsd', 'saw_post'], fold_river: [DR, 'r3_fold_bet', 'r3_face_bet'], fold_odds: [['27TD','Badugi'], 'eq_fold', 'eq_fold_opp']};
     const out = {C: {}, T: {}};
     for (const fmt of ['C', 'T']) for (const [k, [gs, n, d]] of Object.entries(defs)) {
       let nn = 0, dd = 0; const set = new Set(gs);
@@ -358,7 +358,7 @@ details p { max-width: 75ch; color: var(--muted); }
     const fmt = k === 'cash' ? 'C' : 'T'; const P = state.pool[fmt];
     const b = el('section', 'fmt'); const h = el('h3'); h.append(el('span', null, title + ' · ' + fI(r[k + '_hands']) + ' hands')); h.append(el('span', null, r[k + '_style'] || '')); b.append(h);
     const ms = el('div', 'meters');
-    [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['Fold to steal', 'fold_steal'], ['WTSD', 'wtsd'], ['Fold river', 'fold_river']].forEach(([lab, f]) => ms.append(meter(lab, r[k + '_' + f], P[f])));
+    [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['Fold to steal', 'fold_steal'], ['WTSD', 'wtsd'], ['Fold river', 'fold_river'], ['Folds w/ odds', 'fold_odds']].forEach(([lab, f]) => ms.append(meter(lab, r[k + '_' + f], P[f])));
     b.append(ms);
     const reads = r[k + '_reads'] || [];
     if (reads.length) {

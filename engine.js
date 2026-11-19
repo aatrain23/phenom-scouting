@@ -267,7 +267,7 @@
     ['WTSD','wtsd','saw_post','any'],['W$SD','wsd','wtsd','any'],['Check-raise','xr','xr_opp','any'],
     ['Fold 1st-draw bet','r1_fold_bet','r1_face_bet','blind'],['Fold 2nd-draw bet','r2_fold_bet','r2_face_bet','any'],['Fold river bet','r3_fold_bet','r3_face_bet','blind'],
     ['Fold vs pat river bet','fold_pat_river_bet','vs_pat_river_bet','draw'],['River bets shown weak','rbet_sd_weak','rbet_sd','draw'],['River calls shown weak','rcall_sd_weak','rcall_sd','draw'],
-    ['Pat-final shown weak (snow)','snow_sd','pat_final_sd','draw'],['Folds getting the odds','eq_fold','eq_fold_opp','draw'],['Calls without the odds','eq_call','eq_call_opp','draw'],['Pat on 1st draw','d1_pat','d1_n','draw'],['Bets with draw lead','fewer_bet','fewer_opp','draw'],['Leads drawing more','more_lead','more_opp','draw'],
+    ['Pat-final shown weak (snow)','snow_sd','pat_final_sd','draw'],['Folds getting the odds','eq_fold','eq_fold_opp','draw'],['Pat on 1st draw','d1_pat','d1_n','draw'],['Bets with draw lead','fewer_bet','fewer_opp','draw'],['Leads drawing more','more_lead','more_opp','draw'],
     ['Bring-in folds to complete','bi_fold','bi_vs_complete','stud'],['Fold 4th st bet','r1_fold_bet','r1_face_bet','stud'],['Fold 7th st bet','r4_fold_bet','r4_face_bet','stud']];
   const READ = {
     'VPIP': ['Plays loose: value-bet thinner, fewer bluffs multiway', 'Plays tight: steal more, respect their entries'],
@@ -288,7 +288,6 @@
     'River calls shown weak': ['Calls the river light: value-bet thin', null],
     'Pat-final shown weak (snow)': ['Snows often: call their pat bets wider', null],
     'Folds getting the odds': ['Folds draws that have the price: bet into them with any draw lead', 'Calls whenever the price is right'],
-    'Calls without the odds': ['Calls drawing too thin: value-bet pat and draw-lead hands hard', 'Folds when behind on the draw count: semibluff less'],
     'Pat on 1st draw': ['Stands pat early often: weak pats likely', 'Rarely pats early'],
     'Bets with draw lead': ['Always bets the draw lead', 'Checks with the draw lead: expect check-raises'],
     'Leads drawing more': ['Leads while drawing more: often a bluff', 'Never leads drawing more'],
@@ -329,6 +328,7 @@
         c[pre + '_vpip'] = rate(BLIND, 'vpip', 'hands'); c[pre + '_pfr'] = rate(BLIND, 'pfr', 'hands');
         c[pre + '_3bet'] = rate(BLIND, 'threebet', 'face_open'); c[pre + '_fold_steal'] = rate(BLIND, 'fold_steal', 'vs_steal');
         c[pre + '_wtsd'] = rate(DR, 'wtsd', 'saw_post'); c[pre + '_fold_river'] = rate(DR, 'r3_fold_bet', 'r3_face_bet');
+        c[pre + '_fold_odds'] = rate(['27TD','Badugi'], 'eq_fold', 'eq_fold_opp');
         const v = rate(BLIND, 'vpip', 'hands', 100), r = rate(BLIND, 'pfr', 'hands', 100), lp = rate(BLIND, 'open_limp', 'open_opp', 40);
         let style = null;
         if (v !== null && r !== null) {
