@@ -127,7 +127,7 @@
   /* Count one hand into acc ({counts: {key: [..FIELDS]}, last: {fmt|player: date}}); skip players in `skip`. */
   function count(h, acc, skip) {
     const fmt = h.tourney ? 'T' : 'C', g = h.game;
-    const C = p => { if (skip(p)) return null; const k = fmt + '|' + p + '|' + g; return acc.counts[k] || (acc.counts[k] = new Array(FIELDS.length).fill(0)); };
+    const mon = h.date.slice(0, 7); const C = p => { if (skip(p)) return null; const k = fmt + '|' + p + '|' + g + '|' + mon; return acc.counts[k] || (acc.counts[k] = new Array(FIELDS.length).fill(0)); };
     const inc = (p, f) => { const c = C(p); if (c) c[FI[f]] += 1; };
     const acts = h.actions, pls = h.players, pos = h.fam !== 'stud' ? positions(h) : {};
     pls.forEach(p => { if (!skip(p)) { inc(p, 'hands'); const lk = fmt + '|' + p; if (!acc.last[lk] || acc.last[lk] < h.date) acc.last[lk] = h.date; } });
@@ -204,6 +204,25 @@
     return into;
   }
 
+  /* Collapse month-bucketed counts (fmt|player|game|YYYY-MM) into per-game counts. Each month is weighted by
+     0.5 ^ (months before the newest month / halfLife); halfLife = Infinity weighs every hand the same.
+     Returns {counts: weighted, raw: unweighted, last}. Keys without a month count at full weight. */
+  function collapse(acc, halfLife) {
+    let newest = '0000-00';
+    for (const k of Object.keys(acc.counts)) { const m = k.slice(k.lastIndexOf('|') + 1); if (/^\d{4}-\d{2}$/.test(m) && m > newest) newest = m; }
+    const ny = +newest.slice(0, 4), nm = +newest.slice(5, 7);
+    const counts = {}, raw = {}, wcache = {};
+    for (const [k, v] of Object.entries(acc.counts)) {
+      const cut = k.lastIndexOf('|'); const m = k.slice(cut + 1); const hasM = /^\d{4}-\d{2}$/.test(m); const base = hasM ? k.slice(0, cut) : k;
+      let w = 1;
+      if (hasM && isFinite(halfLife)) { w = wcache[m]; if (w === undefined) { const age = (ny - +m.slice(0, 4)) * 12 + (nm - +m.slice(5, 7)); w = wcache[m] = Math.pow(0.5, Math.max(0, age) / halfLife); } }
+      let c = counts[base], r = raw[base];
+      if (!c) { c = counts[base] = new Array(FIELDS.length).fill(0); r = raw[base] = new Array(FIELDS.length).fill(0); }
+      for (let i = 0; i < FIELDS.length; i++) { const x = v[i] || 0; if (x) { c[i] += x * w; r[i] += x; } }
+    }
+    return {counts, raw, last: acc.last, newest};
+  }
+
   /* ---------- cards ---------- */
   const BLIND = ['27TD','A5TD','Badugi','Badeucy','O8','Badacey','2-7 Single Draw No',"Hold'em","Hold'em No",'Omaha Pot','Dramaha 2-7','Dramaha High','5 Card Omaha Hi/Lo Pot','FLO/DB'];
   const DR = ['27TD','A5TD','Badugi','Badeucy'];
@@ -247,15 +266,16 @@
 
   function buildCards(acc, notes) {
     // index counts: fmt -> player -> game -> array
-    const by = {C: {}, T: {}};
+    if (!acc.raw) acc = collapse(acc, Infinity);
+    const by = {C: {}, T: {}}, byR = {C: {}, T: {}};
     for (const [k, v] of Object.entries(acc.counts)) {
       const [fmt, ...rest] = k.split('|'); const g = rest.pop(); const p = rest.join('|');
-      ((by[fmt][p] = by[fmt][p] || {}))[g] = v;
+      ((by[fmt][p] = by[fmt][p] || {}))[g] = v; ((byR[fmt][p] = byR[fmt][p] || {}))[g] = acc.raw[k];
     }
     const sum = (games, gs, f) => { let s = 0; for (const g of gs) if (games[g]) s += games[g][FI[f]]; return s; };
     const cards = {};
     for (const fmt of ['C', 'T']) {
-      const P = by[fmt]; const players = Object.keys(P);
+      const P = by[fmt], PR = byR[fmt]; const players = Object.keys(P);
       // pool totals per family/stat
       const pool = {};
       for (const [fam, gs] of Object.entries(FAMS)) for (const [, n, d] of STATS) {
@@ -265,13 +285,13 @@
       }
       const blindVpip = pool['ALLBLIND|vpip|hands']; const poolVpip = blindVpip[1] ? 100 * blindVpip[0] / blindVpip[1] : 40;
       for (const p of players) {
-        const games = P[p]; const hands = Object.values(games).reduce((s, a) => s + a[0], 0);
+        const games = P[p], rgames = PR[p]; const hands = Math.round(Object.values(rgames).reduce((s, a) => s + a[0], 0));
         const c = cards[p] || (cards[p] = {player: p, cash_hands: 0, tour_hands: 0, games: {}, last_seen: ''});
         c[fmt === 'C' ? 'cash_hands' : 'tour_hands'] = hands;
-        for (const [g, a] of Object.entries(games)) c.games[g] = (c.games[g] || 0) + a[0];
+        for (const [g, a] of Object.entries(rgames)) c.games[g] = (c.games[g] || 0) + a[0];
         const ls = acc.last[fmt + '|' + p]; if (ls && ls > c.last_seen) c.last_seen = ls;
         if (hands < 50) continue;
-        const rate = (gs, n, d, mn = 20) => { const dd = sum(games, gs, d); return dd >= mn ? Math.round(1000 * sum(games, gs, n) / dd) / 10 : null; };
+        const rate = (gs, n, d, mn = 20) => { if (sum(rgames, gs, d) < mn) return null; const dd = sum(games, gs, d); return dd > 0 ? Math.round(1000 * sum(games, gs, n) / dd) / 10 : null; };
         const pre = fmt === 'C' ? 'cash' : 'tour';
         c[pre + '_vpip'] = rate(BLIND, 'vpip', 'hands'); c[pre + '_pfr'] = rate(BLIND, 'pfr', 'hands');
         c[pre + '_3bet'] = rate(BLIND, 'threebet', 'face_open'); c[pre + '_fold_steal'] = rate(BLIND, 'fold_steal', 'vs_steal');
@@ -291,7 +311,7 @@
           if (scope !== 'stud' && scope !== 'any' && isStud) continue;
           if (scope === 'any' && isStud && !['VPIP','PFR','Open-limp','3-bet','WTSD','W$SD','Check-raise','Fold 2nd-draw bet'].includes(name)) continue;
           if (scope === 'draw' && ['O8','ALLBLIND','2-7 Single Draw No'].includes(fam)) continue;
-          const dn = sum(games, gs, d); if (dn < 25) continue;
+          if (sum(rgames, gs, d) < 25) continue; const dn = sum(games, gs, d); if (dn < 5) continue;
           const nn = sum(games, gs, n); const [pn, pd] = pool[fam + '|' + n + '|' + d];
           const P2 = (pn - nn) / Math.max(1, pd - dn);
           const se = Math.sqrt(Math.max(P2 * (1 - P2), 1e-4) / dn); const z = (nn / dn - P2) / se;
@@ -314,6 +334,6 @@
     rows.sort((a, b) => (b.cash_hands + b.tour_hands) - (a.cash_hands + a.tour_hands));
     return rows;
   }
-  const api = {FIELDS, parse, count, merge, buildCards, empty: () => ({counts: {}, last: {}})};
+  const api = {FIELDS, parse, count, merge, collapse, buildCards, empty: () => ({counts: {}, last: {}})};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PhenomEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);

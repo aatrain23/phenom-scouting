@@ -37,7 +37,7 @@ for (const f of files) {
         arr[i] = v;
       }
       if (bad) break;
-      one.counts[fmt + '|' + p + '|' + g] = arr;
+      one.counts[fmt + '|' + p + '|' + g + '|' + date.slice(0, 7)] = arr;
       const lk = fmt + '|' + p; if (!one.last[lk] || one.last[lk] < date) one.last[lk] = date;
     }
     if (bad) continue;
