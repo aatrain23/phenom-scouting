@@ -128,7 +128,7 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
 .tablebar p { max-width: 60ch; margin: 4px 0 0; }
 .tbctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .felt-wrap { padding: 8px 0 4px; }
-.felt { position: relative; width: 100%; aspect-ratio: 16 / 9.4; min-height: 560px; }
+.felt { position: relative; width: 100%; aspect-ratio: 16 / 11; min-height: 760px; }
 .felt::before { content: ""; position: absolute; inset: 14% 12%; border-radius: 50% / 50%; background: radial-gradient(ellipse at 50% 40%, #2b8a63, #1d6b4f 55%, #134a37); box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
 .felt .rail { position: absolute; inset: calc(14% - 12px) calc(12% - 12px); border-radius: 50% / 50%; border: 12px solid #6b4a2b; box-shadow: 0 8px 24px rgba(0,0,0,.18); pointer-events: none; }
 .felt-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.22); font-size: 28px; letter-spacing: .5em; pointer-events: none; }
@@ -156,6 +156,8 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
 .scard .mini b { display: block; font: 500 13px var(--mono); color: var(--ink); }
 .scard .mini b.hi { color: var(--up); } .scard .mini b.lo { color: var(--down); }
 .scard .sr { font-size: 11.5px; line-height: 1.3; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.scard .sr li { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.scard .sr li:hover { -webkit-line-clamp: unset; }
 .scard select { font: 11.5px var(--body); padding: 3px 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
 .ghost-card { position: fixed; z-index: 50; pointer-events: none; width: 224px; opacity: .92; transform: rotate(-2deg); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
 .seat.lifting > .scard { opacity: .35; }
@@ -391,7 +393,7 @@ details p { max-width: 75ch; color: var(--muted); }
   }
   function seatPos(i, n) {
     const ang = (90 + 360 * (i + 1) / n) * Math.PI / 180;
-    return {x: 50 + 40 * Math.cos(ang), y: 50 + 38 * Math.sin(ang)};
+    return {x: 50 + 40 * Math.cos(ang), y: 47 + 39 * Math.sin(ang)};
   }
   function seatCard(r, i) {
     const both = T.fmt === 'both'; const k = T.fmt === 'tour' ? 'tour' : T.fmt === 'cash' ? 'cash' : (r.cash_hands >= 50 ? 'cash' : 'tour');
