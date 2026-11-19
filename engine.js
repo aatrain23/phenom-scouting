@@ -8,7 +8,12 @@
     'vs_steal','fold_steal','bi_vs_complete','bi_fold','saw_post','wtsd','wsd','xr','xr_opp',
     'r1_face_bet','r1_fold_bet','r2_face_bet','r2_fold_bet','r3_face_bet','r3_fold_bet','r4_face_bet','r4_fold_bet',
     'd1_n','d1_pat','fewer_opp','fewer_bet','more_opp','more_lead','vs_pat_river_bet','fold_pat_river_bet',
-    'rbet_sd','rbet_sd_weak','rcall_sd','rcall_sd_weak','pat_final_sd','snow_sd'];
+    'rbet_sd','rbet_sd_weak','rcall_sd','rcall_sd_weak','pat_final_sd','snow_sd',
+    'eq_fold_opp','eq_fold','eq_call_opp','eq_call'];
+  /* Heads-up showdown equity by draw count after a draw, from the MixEq Monte Carlo engine (every hand
+     played by standard pat/keep rules). Key: game|draws left|cards I drew|cards they drew -> my equity. */
+  const EQT = {"27TD|2|0|1":0.574,"27TD|2|1|0":0.426,"27TD|2|0|2":0.705,"27TD|2|2|0":0.295,"27TD|2|0|3":0.769,"27TD|2|3|0":0.231,"27TD|2|0|4":0.804,"27TD|2|4|0":0.196,"27TD|2|0|5":0.829,"27TD|2|5|0":0.171,"27TD|2|1|1":0.506,"27TD|2|1|2":0.598,"27TD|2|2|1":0.402,"27TD|2|1|3":0.648,"27TD|2|3|1":0.352,"27TD|2|1|4":0.675,"27TD|2|4|1":0.325,"27TD|2|1|5":0.701,"27TD|2|5|1":0.299,"27TD|2|2|2":0.509,"27TD|2|2|3":0.557,"27TD|2|3|2":0.443,"27TD|2|2|4":0.585,"27TD|2|4|2":0.415,"27TD|2|2|5":0.623,"27TD|2|5|2":0.377,"27TD|2|3|3":0.503,"27TD|2|3|4":0.524,"27TD|2|4|3":0.476,"27TD|2|3|5":0.584,"27TD|2|5|3":0.416,"27TD|2|4|4":0.499,"27TD|2|4|5":0.525,"27TD|2|5|4":0.475,"27TD|1|0|0":0.485,"27TD|1|0|1":0.718,"27TD|1|1|0":0.282,"27TD|1|0|2":0.827,"27TD|1|2|0":0.173,"27TD|1|0|3":0.872,"27TD|1|3|0":0.128,"27TD|1|0|4":0.899,"27TD|1|4|0":0.101,"27TD|1|1|1":0.495,"27TD|1|1|2":0.617,"27TD|1|2|1":0.383,"27TD|1|1|3":0.653,"27TD|1|3|1":0.347,"27TD|1|1|4":0.68,"27TD|1|4|1":0.32,"27TD|1|2|2":0.488,"27TD|1|2|3":0.574,"27TD|1|3|2":0.426,"27TD|1|2|4":0.597,"27TD|1|4|2":0.403,"27TD|1|3|3":0.485,"27TD|1|3|4":0.557,"27TD|1|4|3":0.443,"Badugi|2|0|0":0.516,"Badugi|2|0|1":0.712,"Badugi|2|1|0":0.288,"Badugi|2|0|2":0.802,"Badugi|2|2|0":0.198,"Badugi|2|0|3":0.837,"Badugi|2|3|0":0.163,"Badugi|2|1|1":0.496,"Badugi|2|1|2":0.595,"Badugi|2|2|1":0.405,"Badugi|2|1|3":0.63,"Badugi|2|3|1":0.37,"Badugi|2|1|4":0.656,"Badugi|2|4|1":0.344,"Badugi|2|2|2":0.498,"Badugi|2|2|3":0.551,"Badugi|2|3|2":0.449,"Badugi|2|2|4":0.568,"Badugi|2|4|2":0.432,"Badugi|2|3|3":0.491,"Badugi|2|3|4":0.539,"Badugi|2|4|3":0.461,"Badugi|1|0|0":0.506,"Badugi|1|0|1":0.792,"Badugi|1|1|0":0.208,"Badugi|1|0|2":0.891,"Badugi|1|2|0":0.109,"Badugi|1|0|3":0.921,"Badugi|1|3|0":0.079,"Badugi|1|1|1":0.491,"Badugi|1|1|2":0.644,"Badugi|1|2|1":0.356,"Badugi|1|1|3":0.696,"Badugi|1|3|1":0.304,"Badugi|1|2|2":0.504,"Badugi|1|2|3":0.552,"Badugi|1|3|2":0.448};
+  const EQ_MARGIN_FOLD = 0.15, EQ_MARGIN_CALL = 0.10;
   const FI = Object.fromEntries(FIELDS.map((f, i) => [f, i]));
   const GAMEMAP = {'2-7 Triple Draw':'27TD','A-5 Triple Draw':'A5TD','Badugi':'Badugi','Badeucy':'Badeucy','Omaha Hi/Lo':'O8','7 Card Stud Hi/Lo':'Stud8','2-7 Razz':'27Razz'};
   const DRAW4 = new Set(['27TD','A5TD','Badugi','Badeucy']);
@@ -37,7 +42,7 @@
       const fam = block.includes('*** 3rd STREET ***') ? 'stud' : (block.includes('*** HOLE CARDS ***') ? 'flop' : 'draw');
       const final = fam === 'stud' ? 4 : (gname.includes('Single Draw') ? 1 : (gname.includes('Double Draw') ? 2 : 3));
       const h = {id, tourney, game, fam, final, date: date.replace(/\//g, '-'), players: [], chips: {}, actions: [], showdown: {}, desc: {},
-        contrib: {}, collected: {}, rake: 0, sbp: null, bbp: null, bringin: null, hero: null};
+        contrib: {}, collected: {}, posted: 0, pre: {}, rake: 0, sbp: null, bbp: null, bringin: null, hero: null};
       let street = -1, sb = {}, insum = false;
       const add = (o, p, v) => { o[p] = (o[p] || 0) + v; };
       for (let i = 1; i < lines.length; i++) {
@@ -72,10 +77,10 @@
         if (!mm || h.chips[mm[1]] === undefined) continue;
         const p = mm[1], a = mm[2], st = Math.max(street, 0);
         const amt = s => num(s.match(AMT)[1]);
-        if (a.startsWith('posts the ante')) { add(h.contrib, p, amt(a.slice(14))); continue; }
-        if (a.startsWith('posts small blind')) { const v = amt(a.slice(17)); add(h.contrib, p, v); add(sb, p, v); h.sbp = p; continue; }
-        if (a.startsWith('posts big blind')) { const v = amt(a.slice(15)); add(h.contrib, p, v); add(sb, p, v); h.bbp = p; continue; }
-        if (a.startsWith('posts')) { const v = amt(a.replace(/^posts \D*/, '')); add(h.contrib, p, v); add(sb, p, v); continue; }
+        if (a.startsWith('posts the ante')) { const v = amt(a.slice(14)); add(h.contrib, p, v); h.posted += v; continue; }
+        if (a.startsWith('posts small blind')) { const v = amt(a.slice(17)); h.posted += v; add(h.pre, p, v); add(h.contrib, p, v); add(sb, p, v); h.sbp = p; continue; }
+        if (a.startsWith('posts big blind')) { const v = amt(a.slice(15)); h.posted += v; add(h.pre, p, v); add(h.contrib, p, v); add(sb, p, v); h.bbp = p; continue; }
+        if (a.startsWith('posts')) { const v = amt(a.replace(/^posts \D*/, '')); h.posted += v; add(h.pre, p, v); add(h.contrib, p, v); add(sb, p, v); continue; }
         if (a.startsWith('brings in for')) { const v = amt(a.slice(13)); add(h.contrib, p, v); add(sb, p, v); h.bringin = p; h.actions.push([st, p, 'bringin', v]); continue; }
         if (a === 'folds') { h.actions.push([st, p, 'fold', 0]); continue; }
         if (a === 'checks') { h.actions.push([st, p, 'check', 0]); continue; }
@@ -182,6 +187,32 @@
           if (a === 'bet') unbet = false;
         }
       }
+      // Pot-odds reads: heads-up after the 1st or 2nd draw, facing a bet, using draw-count equity
+      if ((g === '27TD' || g === 'Badugi') && h.posted) {
+        let pot = h.posted, cur = 0; let commit = Object.assign({}, h.pre || {});
+        for (const [s, p, a, v] of acts) {
+          if (a === 'draw') continue;
+          if (s !== cur) { cur = s; commit = {}; }
+          const top = Math.max(0, ...Object.values(commit));
+          const toCall = top - (commit[p] || 0);
+          if ((s === 1 || s === 2) && toCall > 0 && (a === 'fold' || a === 'call' || a === 'raise')) {
+            const d = draws[s] || {}; const ks = Object.keys(d);
+            if (ks.length === 2 && d[p] !== undefined) {
+              const op = ks[0] === p ? ks[1] : ks[0];
+              const eq = EQT[g + '|' + (3 - s) + '|' + d[p] + '|' + d[op]];
+              if (eq !== undefined) {
+                const need = toCall / (pot + toCall);
+                if (eq >= need + EQ_MARGIN_FOLD) { inc(p, 'eq_fold_opp'); if (a === 'fold') inc(p, 'eq_fold'); }
+                if (eq < need - EQ_MARGIN_CALL) { inc(p, 'eq_call_opp'); if (a === 'call') inc(p, 'eq_call'); }
+              }
+            }
+          }
+          let add = 0;
+          if (a === 'call' || a === 'bet' || a === 'bringin') add = v || 0;
+          else if (a === 'raise') add = Math.max(0, (v || 0) - (commit[p] || 0));
+          commit[p] = (commit[p] || 0) + add; pot += add;
+        }
+      }
       const d3 = draws[3] || {}; let bettor = null;
       for (const [s, p, a] of acts) {
         if (s !== 3 || a === 'draw') continue;
@@ -236,7 +267,7 @@
     ['WTSD','wtsd','saw_post','any'],['W$SD','wsd','wtsd','any'],['Check-raise','xr','xr_opp','any'],
     ['Fold 1st-draw bet','r1_fold_bet','r1_face_bet','blind'],['Fold 2nd-draw bet','r2_fold_bet','r2_face_bet','any'],['Fold river bet','r3_fold_bet','r3_face_bet','blind'],
     ['Fold vs pat river bet','fold_pat_river_bet','vs_pat_river_bet','draw'],['River bets shown weak','rbet_sd_weak','rbet_sd','draw'],['River calls shown weak','rcall_sd_weak','rcall_sd','draw'],
-    ['Pat-final shown weak (snow)','snow_sd','pat_final_sd','draw'],['Pat on 1st draw','d1_pat','d1_n','draw'],['Bets with draw lead','fewer_bet','fewer_opp','draw'],['Leads drawing more','more_lead','more_opp','draw'],
+    ['Pat-final shown weak (snow)','snow_sd','pat_final_sd','draw'],['Folds getting the odds','eq_fold','eq_fold_opp','draw'],['Calls without the odds','eq_call','eq_call_opp','draw'],['Pat on 1st draw','d1_pat','d1_n','draw'],['Bets with draw lead','fewer_bet','fewer_opp','draw'],['Leads drawing more','more_lead','more_opp','draw'],
     ['Bring-in folds to complete','bi_fold','bi_vs_complete','stud'],['Fold 4th st bet','r1_fold_bet','r1_face_bet','stud'],['Fold 7th st bet','r4_fold_bet','r4_face_bet','stud']];
   const READ = {
     'VPIP': ['Plays loose: value-bet thinner, fewer bluffs multiway', 'Plays tight: steal more, respect their entries'],
@@ -256,6 +287,8 @@
     'River bets shown weak': ['Bluffs the river: bluff-catch wider', 'Honest river bettor: fold more to them'],
     'River calls shown weak': ['Calls the river light: value-bet thin', null],
     'Pat-final shown weak (snow)': ['Snows often: call their pat bets wider', null],
+    'Folds getting the odds': ['Folds draws that have the price: bet into them with any draw lead', 'Calls whenever the price is right'],
+    'Calls without the odds': ['Calls drawing too thin: value-bet pat and draw-lead hands hard', 'Folds when behind on the draw count: semibluff less'],
     'Pat on 1st draw': ['Stands pat early often: weak pats likely', 'Rarely pats early'],
     'Bets with draw lead': ['Always bets the draw lead', 'Checks with the draw lead: expect check-raises'],
     'Leads drawing more': ['Leads while drawing more: often a bluff', 'Never leads drawing more'],
