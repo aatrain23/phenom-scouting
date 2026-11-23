@@ -67,6 +67,20 @@ a.btn { text-decoration: none; display: inline-block; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper); }
 .seg button { font: 500 13.5px var(--body); padding: 8px 12px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--felt); color: #fff; }
+.tablebar { position: relative; z-index: 30; }
+details.gpick { position: relative; background: none; border: 0; border-radius: 0; padding: 0; }
+details.gpick > summary { font-weight: 400; }
+.gpick > summary { list-style: none; cursor: pointer; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gpick > summary::-webkit-details-marker { display: none; }
+.gpick > summary::after { content: ' ▾'; color: var(--muted); }
+.gpick > summary:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+.gpanel { position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: 300px; max-height: 420px; overflow: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.gpanel h4 { margin: 0; font: 600 11px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.gpanel .chips { gap: 5px; }
+.gpanel .chip[aria-pressed="true"] { background: var(--felt); color: var(--paper); border-color: var(--felt); }
+.gpanel label { display: flex; gap: 8px; align-items: center; font-size: 13.5px; padding: 3px 0; cursor: pointer; }
+.gpanel .glist { display: flex; flex-direction: column; }
+.gpanel .gfoot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
 .sel { font: 14px var(--body); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font: 500 12.5px var(--body); border-radius: 999px; padding: 5px 11px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
@@ -129,7 +143,8 @@ table.mt .x { background: none; border: 1px solid var(--line); border-radius: 8p
 .tablebar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-end; }
 .tablebar p { max-width: 60ch; margin: 4px 0 0; }
 .tbctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.felt-wrap { padding: 8px 0 4px; }
+.felt-wrap { padding: 96px 0 4px; }
+@media (max-width: 760px) { .felt-wrap { padding-top: 8px; } }
 .felt { position: relative; width: 100%; aspect-ratio: 16 / 11; min-height: 760px; }
 .felt::before { content: ""; position: absolute; inset: 14% 12%; border-radius: 50% / 50%; background: radial-gradient(ellipse at 50% 40%, #2b8a63, #1d6b4f 55%, #134a37); box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
 .felt .rail { position: absolute; inset: calc(14% - 12px) calc(12% - 12px); border-radius: 50% / 50%; border: 12px solid #6b4a2b; box-shadow: 0 8px 24px rgba(0,0,0,.18); pointer-events: none; }
@@ -254,8 +269,8 @@ details p { max-width: 75ch; color: var(--muted); }
       <div class="tbctl">
         <label class="small" for="nseats">Table</label>
         <select class="sel" id="nseats"><option value="2">Heads-up</option><option value="6" selected>6-max</option><option value="8">8-handed</option><option value="9">9-handed</option></select>
-        <label class="small" for="tgame">Game</label>
-        <select class="sel" id="tgame"></select>
+        <span class="small" id="tgame-lab">Games</span>
+        <details class="gpick" id="tgame-wrap"><summary class="sel" id="tgame" aria-describedby="tgame-lab">All games</summary><div class="gpanel" id="tgame-panel"></div></details>
         <select class="sel" id="tfmt" aria-label="Stats to show"><option value="both">Cash and tournaments</option><option value="cash">Cash only</option><option value="tour">Tournaments only</option></select>
         <button type="button" class="btn ghost" id="tclear">Clear table</button>
       </div>
@@ -388,8 +403,15 @@ details p { max-width: 75ch; color: var(--muted); }
     c.append(body); return c;
   }
   // ---------- my table ----------
-  const T = {n: 6, seats: new Array(5).fill(null), fmt: 'both'};
-  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.filter(x => x !== '__me__').slice(0, T.n - 1); while (T.seats.length < T.n - 1) T.seats.push(null); T.fmt = sv.fmt === 'cash' || sv.fmt === 'tour' ? sv.fmt : 'both'; T.game = sv.game || 'all'; } } catch (e) {}
+  const MIXDEF = [
+    ['mix:8game', '8-Game Mix', ['27TD',"Hold'em",'O8','Razz','7 Card Stud','Stud8',"Hold'em No",'Omaha Pot']],
+    ['mix:horse', 'H.O.R.S.E.', ["Hold'em",'O8','Razz','7 Card Stud','Stud8']],
+    ['mix:td', 'Triple Draw Mix', ['27TD','A5TD','Badugi','Badeucy','Badacey']],
+    ['mix:draw', 'All draw games', ['27TD','A5TD','Badugi','Badeucy','Badacey','2-7 Single Draw No','Pot Limit 2-7 Triple Draw','Archie 6s Hi/Lo']],
+    ['mix:stud', 'All stud games', ['7 Card Stud','Stud8','Razz','27Razz','7 Card Stud Hi/Lo Regular']],
+    ['mix:omaha', 'All Omaha games', ['O8','Omaha Pot','5 Card Omaha Hi/Lo Pot','FLO/DB','Dramaha High','Dramaha 2-7','Dramaha Badugi']]];
+  const T = {n: 6, seats: new Array(5).fill(null), fmt: 'both', games: []};
+  try { const sv = JSON.parse(localStorage.getItem('phenom-seats') || 'null'); if (sv && Array.isArray(sv.seats)) { T.n = [2, 6, 8, 9].includes(sv.n) ? sv.n : 6; T.seats = sv.seats.filter(x => x !== '__me__').slice(0, T.n - 1); while (T.seats.length < T.n - 1) T.seats.push(null); T.fmt = sv.fmt === 'cash' || sv.fmt === 'tour' ? sv.fmt : 'both'; T.games = Array.isArray(sv.games) ? sv.games.filter(x => typeof x === 'string') : (sv.game && sv.game !== 'all' ? (sv.game.startsWith('mix:') ? ((MIXDEF.find(m => m[0] === sv.game) || [, , []])[2]).slice() : [sv.game]) : []); } } catch (e) {}
   if (Array.isArray(state.seated) && state.seated.length && T.seats.every(x => !x)) state.seated.slice(0, T.n - 1).forEach((p, i) => { T.seats[i] = p; });
   function saveSeats() { try { localStorage.setItem('phenom-seats', JSON.stringify(T)); } catch (e) {} }
   function seatedHas(p) { return T.seats.includes(p); }
@@ -415,21 +437,21 @@ details p { max-width: 75ch; color: var(--muted); }
     const row = el('div', 'row'); const pill = el('span', 'pill', st); pill.style.color = col; row.append(pill); row.append(el('span', null, both ? fI(r.cash_hands + r.tour_hands) + ' hands' : fI(r[k + '_hands']) + ' ' + (k === 'cash' ? 'cash' : 'tourn.') + ' hands')); b.append(row);
     const mini = el('div', 'mini');
     const BL_ALL = ['27TD','A5TD','Badugi','Badeucy','O8','Badacey','2-7 Single Draw No',"Hold'em","Hold'em No",'Omaha Pot','Dramaha 2-7','Dramaha High','5 Card Omaha Hi/Lo Pot','FLO/DB'];
-    const games = gamesFor(T.game) || (both ? BL_ALL : null);
+    const sel = T.games.length ? T.games : null; const games = sel || (both ? BL_ALL : null); const gkey = (sel ? sel.join(',') : 'all');
     const cell = (lab, v, pv) => { const d = el('div'); d.append(document.createTextNode(lab)); const bb = el('b', null, v == null ? '–' : v.toFixed(0) + '%'); if (v != null && pv != null) { if (v - pv >= 8) bb.className = 'hi'; else if (pv - v >= 8) bb.className = 'lo'; bb.title = 'Pool ' + pv.toFixed(0) + '%'; } d.append(bb); mini.append(d); };
     if (games) {
-      const fk = both ? 'B' : (k === 'cash' ? 'C' : 'T'); const S = state.selCache && state.selCache.key === T.game + fk ? state.selCache.S : (state.selCache = {key: T.game + fk, S: selStats(games, fk)}).S;
+      const fk = both ? 'B' : (k === 'cash' ? 'C' : 'T'); const S = state.selCache && state.selCache.key === gkey + fk ? state.selCache.S : (state.selCache = {key: gkey + fk, S: selStats(games, fk)}).S;
       const me = S.player(r.player);
-      row.lastChild.textContent = T.game === 'all' ? fI(r.cash_hands + r.tour_hands) + ' hands' : fI(me.hands) + ' hands in ' + $('tgame').selectedOptions[0].textContent;
+      row.lastChild.textContent = !sel ? fI(r.cash_hands + r.tour_hands) + ' hands' : fI(me.hands) + ' hands in ' + (sel.length === 1 ? (GNAME[sel[0]] || sel[0]) : 'these games'); row.lastChild.title = sel ? gameLabel() : '';
       S.defs.forEach(([lab], j) => cell(lab, me.vals[j], S.pool[j]));
       b.append(mini);
-      if (T.game !== 'all' && me.hands < 30) b.append(el('div', 'few', me.hands ? 'Few hands in this game: treat as a guess.' : 'No hands in this game yet: showing nothing.'));
+      if (sel && me.hands < 30) b.append(el('div', 'few', me.hands ? 'Few hands in ' + (sel.length > 1 ? 'these games' : 'this game') + ': treat as a guess.' : 'No hands in ' + (sel.length > 1 ? 'these games' : 'this game') + ' yet: showing nothing.'));
     } else {
       [['VPIP', 'vpip'], ['PFR', 'pfr'], ['3-bet', '3bet'], ['F. steal', 'fold_steal'], ['WTSD', 'wtsd'], ['F. river', 'fold_river']].forEach(([lab, f]) => cell(lab, r[k + '_' + f], P[f]));
       b.append(mini);
     }
     let allR = both ? [...(r.cash_reads || []), ...(r.tour_reads || [])].filter((x, j, a) => a.findIndex(y => y.text === x.text) === j) : (r[k + '_reads'] || []);
-    if (games) { const lab = (GNAME[T.game] || '').toLowerCase(); const keyw = {'27TD': '2-7 td', 'A5TD': 'a-5 td', 'O8': 'omaha hi/lo', 'Stud8': 'stud hi/lo', '7 Card Stud': 'stud high', '2-7 Single Draw No': '2-7 single draw'}[T.game] || lab; allR = allR.slice().sort((a, b2) => (b2.games.toLowerCase() === keyw) - (a.games.toLowerCase() === keyw)); }
+    if (sel) { const KW = {'27TD': '2-7 td', 'A5TD': 'a-5 td', 'O8': 'omaha hi/lo', 'Stud8': 'stud hi/lo', '7 Card Stud': 'stud high', '2-7 Single Draw No': '2-7 single draw'}; const keys = new Set(sel.map(g => KW[g] || (GNAME[g] || g).toLowerCase())); const hit = x => keys.has(String(x.games).toLowerCase()); allR = allR.slice().sort((a, b2) => hit(b2) - hit(a)); }
     const reads = allR.slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
@@ -470,23 +492,17 @@ details p { max-width: 75ch; color: var(--muted); }
   }
   // ---------- game / mix picker for the table ----------
   const GNAME = {'27TD':'2-7 Triple Draw','A5TD':'A-5 Triple Draw','Badugi':'Badugi','Badeucy':'Badeucy','Badacey':'Badacey','O8':'Omaha Hi/Lo','Stud8':'Stud Hi/Lo','7 Card Stud':'Stud','Razz':'Razz','27Razz':'2-7 Razz','2-7 Single Draw No':'2-7 Single Draw (NL)',"Hold'em":"Limit Hold'em","Hold'em No":"NL Hold'em",'Omaha Pot':'PLO','5 Card Omaha Hi/Lo Pot':'5-Card PLO8','Dramaha 2-7':'Dramaha 2-7','Dramaha High':'Dramaha High','Dramaha Badugi':'Dramaha Badugi','Archie 6s Hi/Lo':'Archie 6s','FLO/DB':'FLO Double Board','7 Card Stud Hi/Lo Regular':'Stud Hi/Lo Regular','Pot Limit 2-7 Triple Draw':'PL 2-7 Triple Draw'};
-  const MIXES = [
-    ['mix:8game', '8-Game Mix', ['27TD',"Hold'em",'O8','Razz','7 Card Stud','Stud8',"Hold'em No",'Omaha Pot']],
-    ['mix:horse', 'H.O.R.S.E.', ["Hold'em",'O8','Razz','7 Card Stud','Stud8']],
-    ['mix:td', 'Triple Draw Mix', ['27TD','A5TD','Badugi','Badeucy','Badacey']],
-    ['mix:draw', 'All draw games', ['27TD','A5TD','Badugi','Badeucy','Badacey','2-7 Single Draw No','Pot Limit 2-7 Triple Draw','Archie 6s Hi/Lo']],
-    ['mix:stud', 'All stud games', ['7 Card Stud','Stud8','Razz','27Razz','7 Card Stud Hi/Lo Regular']],
-    ['mix:omaha', 'All Omaha games', ['O8','Omaha Pot','5 Card Omaha Hi/Lo Pot','FLO/DB','Dramaha High','Dramaha 2-7','Dramaha Badugi']]];
+  const MIXES = MIXDEF;
   const STUDSET = new Set(['7 Card Stud','Stud8','Razz','27Razz','7 Card Stud Hi/Lo Regular','Super 7 Card Stud','Super 7 Card Stud Hi/Lo','Super Razz','Super 2-7 Razz','Razzdugi','Razzdeucey']);
   const FINAL = g => STUDSET.has(g) ? 4 : (g === '2-7 Single Draw No' ? 1 : 3);
-  T.game = T.game || 'all';
+  if (!Array.isArray(T.games)) T.games = [];
+  delete T.game;
   function indexCounts() {
     const by = {C: {}, T: {}}, byR = {C: {}, T: {}}; const tot = {};
     for (const [k, v] of Object.entries(state.W.counts)) { const f = k[0]; const rest = k.slice(2); const cut = rest.lastIndexOf('|'); const p = rest.slice(0, cut), g = rest.slice(cut + 1); const rv = state.W.raw[k]; ((by[f][p] = by[f][p] || {}))[g] = v; ((byR[f][p] = byR[f][p] || {}))[g] = rv; tot[g] = (tot[g] || 0) + rv[0]; }
     state.by = by; state.byR = byR; state.gameTotals = tot;
   }
-  function gamesFor(sel) { if (sel === 'all') return null; const m = MIXES.find(x => x[0] === sel); return m ? m[2] : [sel]; }
-  const FX = Object.fromEntries(E.FIELDS.map((f, i) => [f, i]));
+    const FX = Object.fromEntries(E.FIELDS.map((f, i) => [f, i]));
   function selStats(games, fmt) {
     // returns function(player) -> stats over the selected games, plus pool rates
     const studOnly = games.every(g => STUDSET.has(g)), anyStud = games.some(g => STUDSET.has(g));
@@ -499,14 +515,37 @@ details p { max-width: 75ch; color: var(--muted); }
     const sumv = (p, fl, src) => fmts.reduce((t, f) => t + val((((src || state.by)[f] || {})[p]) || {}, fl), 0);
     return {defs, pool, anyStud, player: p => ({hands: Math.round(sumv(p, ['hands'], state.byR)), vals: defs.map(([, num, den]) => { if (sumv(p, den, state.byR) < 15) return null; const d = sumv(p, den); return d > 0 ? 100 * sumv(p, num) / d : null; })})};
   }
-  function fillGameSelect() {
-    const sel = $('tgame'); if (!state.gameTotals) return; const cur = T.game;
-    sel.replaceChildren(); const o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = 'All games (overall stats)'; sel.append(o0);
-    const gm = document.createElement('optgroup'); gm.label = 'Mixes'; MIXES.forEach(([v, lab]) => { const o = document.createElement('option'); o.value = v; o.textContent = lab; gm.append(o); }); sel.append(gm);
-    const gg = document.createElement('optgroup'); gg.label = 'Single games';
-    Object.entries(state.gameTotals).filter(([, n]) => n >= 1500).sort((a, b) => (GNAME[a[0]] || a[0]).localeCompare(GNAME[b[0]] || b[0])).forEach(([g]) => { const o = document.createElement('option'); o.value = g; o.textContent = GNAME[g] || g; gg.append(o); });
-    sel.append(gg); sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'all'; T.game = sel.value;
+  const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+  function gameLabel() {
+    const g = T.games; if (!g.length) return 'All games';
+    const m = MIXES.find(x => sameSet(x[2], g)); if (m) return m[1];
+    const names = g.map(x => GNAME[x] || x); return names.length <= 2 ? names.join(' + ') : names.length + ' games: ' + names.join(', ');
   }
+  function setGames(list) { T.games = [...new Set(list)]; saveSeats(); renderTable(); }
+  function fillGameSelect() {
+    const sum = $('tgame'); sum.textContent = gameLabel(); sum.title = gameLabel();
+    const panel = $('tgame-panel'); if (!state.gameTotals) return;
+    const sig = JSON.stringify([T.games, Object.keys(state.gameTotals).length]); if (panel.dataset.sig === sig) return; panel.dataset.sig = sig;
+    const ae = document.activeElement; const fkey = ae && panel.contains(ae) ? ae.dataset.k : null;
+    panel.replaceChildren();
+    const h1 = el('h4', null, 'Quick picks'); const chips = el('div', 'chips');
+    MIXES.forEach(([, lab, gs]) => { const b = el('button', 'chip', lab); b.type = 'button'; b.dataset.k = 'm' + lab; b.setAttribute('aria-pressed', sameSet(gs, T.games)); b.addEventListener('click', () => setGames(sameSet(gs, T.games) ? [] : gs.slice())); chips.append(b); });
+    panel.append(h1, chips);
+    const h2 = el('h4', null, 'Games at your table (pick any)'); const list = el('div', 'glist');
+    const shown = new Set(Object.entries(state.gameTotals).filter(([, n]) => n >= 1500).map(([g]) => g)); T.games.forEach(g => { if (state.gameTotals[g]) shown.add(g); });
+    [...shown].sort((a, b) => (GNAME[a] || a).localeCompare(GNAME[b] || b)).forEach(g => {
+      const lb = el('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = g; cb.checked = T.games.includes(g); cb.dataset.k = 'g' + g;
+      cb.addEventListener('change', () => setGames(cb.checked ? [...T.games, g] : T.games.filter(x => x !== g)));
+      lb.append(cb, document.createTextNode(GNAME[g] || g)); list.append(lb);
+    });
+    panel.append(h2, list);
+    const foot = el('div', 'gfoot'); const clr = el('button', 'btn ghost', 'All games'); clr.type = 'button'; clr.addEventListener('click', () => setGames([]));
+    const done = el('button', 'btn', 'Done'); done.type = 'button'; done.addEventListener('click', () => { $('tgame-wrap').open = false; $('tgame').focus(); });
+    foot.append(clr, done); panel.append(foot);
+    if (fkey) { const t = [...panel.querySelectorAll('[data-k]')].find(x => x.dataset.k === fkey); if (t) t.focus(); }
+  }
+  document.addEventListener('click', e => { const w = $('tgame-wrap'); if (w.open && !e.composedPath().includes(w)) w.open = false; });
+  document.addEventListener('keydown', e => { const w = $('tgame-wrap'); if (e.key === 'Escape' && w.open) { w.open = false; $('tgame').focus(); } });
   // pointer drag (mouse and touch)
   let drag = null;
   document.addEventListener('pointerdown', e => {
@@ -550,7 +589,6 @@ details p { max-width: 75ch; color: var(--muted); }
   $('fmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); state.limit = 48; render(); }));
   $('sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
   $('nseats').addEventListener('change', e => { const n = +e.target.value; const keep = T.seats.filter(Boolean); T.n = n; T.seats = new Array(n - 1).fill(null); keep.slice(0, n - 1).forEach((p, i) => { T.seats[i] = p; }); saveSeats(); renderTable(); render(); });
-  $('tgame').addEventListener('change', e => { T.game = e.target.value; saveSeats(); renderTable(); });
   $('tfmt').addEventListener('change', e => { T.fmt = e.target.value; saveSeats(); renderTable(); });
   $('tclear').addEventListener('click', () => { T.seats = new Array(T.n - 1).fill(null); saveSeats(); renderTable(); render(); });
   $('weight').value = String(state.half);
