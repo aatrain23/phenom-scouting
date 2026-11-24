@@ -1,8 +1,8 @@
 name: PhenomDB tournament records
 
+# PhenomDB rate-limits GitHub-hosted runners (every request returns 429), so this
+# only runs by hand. Records are refreshed from a home connection instead.
 on:
-  schedule:
-    - cron: '17 9 * * *'
   workflow_dispatch:
     inputs:
       max:
