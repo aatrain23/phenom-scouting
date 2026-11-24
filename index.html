@@ -403,7 +403,7 @@ details p { max-width: 75ch; color: var(--muted); }
     const w = el('div', 'pdb');
     const h = el('h4', null, 'Tournament record · PhenomDB'); const a = el('a', null, 'Open ↗'); a.href = pdbUrl(d.n); a.target = '_blank'; a.rel = 'noopener'; a.setAttribute('aria-label', 'Open ' + r.player + ' on PhenomDB (new tab)'); h.append(a); w.append(h);
     const kv = el('div', 'kv'); const add = (lab, val, cls) => { const x = el('div'); x.append(document.createTextNode(lab)); x.append(el('b', cls || null, val)); kv.append(x); };
-    add('Tourneys', fI(d.tp)); add('Profit', money(d.net), d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : null); add('ROI', pct(d.roi), d.roi > 0 ? 'pos' : d.roi < 0 ? 'neg' : null); add('ITM', d.itm.toFixed(0) + '%');
+    add('Tourneys', fI(d.tp)); add('Profit', money(d.net), d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : null); const roiOk = d.ab >= 1; add('ROI', roiOk ? pct(d.roi) : '–', roiOk ? (d.roi > 0 ? 'pos' : d.roi < 0 ? 'neg' : null) : null); add('ITM', d.itm.toFixed(0) + '%');
     w.append(kv);
     const bits = [];
     if (d.rank && d.q) bits.push('Rated #' + fI(d.rank) + ' of ' + fI(d.of));
@@ -486,7 +486,7 @@ details p { max-width: 75ch; color: var(--muted); }
     const reads = allR.slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
-    const pd = pdbOf(r.player); if (pd) b.append(el('div', 'pdbl', 'PhenomDB: ' + fI(pd.tp) + ' tourneys, ROI ' + pct(pd.roi) + (pd.rank && pd.q ? ', #' + fI(pd.rank) : '')));
+    const pd = pdbOf(r.player); if (pd) b.append(el('div', 'pdbl', 'PhenomDB: ' + fI(pd.tp) + ' tourneys' + (pd.ab >= 1 ? ', ROI ' + pct(pd.roi) : '') + (pd.rank && pd.q ? ', #' + fI(pd.rank) : '')));
     const last = T.seats.length - 1;
     if (last > 0) {
       const mv = el('div', 'mvs');
