@@ -293,7 +293,7 @@ details p { max-width: 75ch; color: var(--muted); }
     <p>Every uploaded hand is read in the uploader's browser. For each opponent the page counts what they did (entered the pot, raised first in, 3-bet, folded to a steal, folded to bets on each draw or street, stood pat, showed down). A read appears when a player's rate is far enough from everyone else's on the same chances that it is unlikely to be luck: a z-score of 2.5 or more on at least 25 chances, the top five per format. Preflop numbers pool the blind games; WTSD and fold-to-river pool 2-7 Triple Draw, A-5 Triple Draw, Badugi and Badeucy. "Shown weak" rates only see hands that reached showdown. Style compares a player's VPIP with the pool's and their PFR with their VPIP, on 100+ hands. With a few hundred hands, treat a read as a lean, not a rule.</p>
     <p>Players change, so by default recent hands count more: each month's hands count half as much as the month three months later (switch this under Weighting). Hand counts on the cards are always real hands; the percentages and reads use the weighting, and a read still needs 25 real chances.</p>
     <p>Notes in gold were written by hand for a few regulars and do not update with new uploads.</p>
-    <p>The tournament record section comes from <a href="https://phenomdb.com" target="_blank" rel="noopener">PhenomDB</a>, which builds it from public on-chain buy-ins and payouts. It is refreshed daily for players with a card, it only shows players PhenomDB has matched to a name, and players who set their PhenomDB profile to private are left out.</p>
+    <p>The cash record adds up PhenomDB's weekly cash leaderboards since March (profit is after rake; "avg buy-in" is total chips bought in divided by sessions, a rough guide to stakes). The tournament record section comes from <a href="https://phenomdb.com" target="_blank" rel="noopener">PhenomDB</a>, which builds it from public on-chain buy-ins and payouts. It is refreshed daily for players with a card, it only shows players PhenomDB has matched to a name, and players who set their PhenomDB profile to private are left out.</p>
   </details>
 </div>
 <script src="engine.js"></script>
@@ -398,6 +398,21 @@ details p { max-width: 75ch; color: var(--muted); }
   const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0) + '%';
   const pdbUrl = name => 'https://phenomdb.com/tournytrack?player=' + encodeURIComponent(name);
   function pdbOf(name) { const e = state.pdb && state.pdb.players[name]; return e && !e.nf && !e.priv && e.tp > 0 ? e : null; }
+  function cashOf(name) { const c = state.pdb && state.pdb.cash && state.pdb.cash.p[name]; return c && c[2] > 0 ? c : null; }
+  const mon = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+  function cashBlock(r) {
+    const c = cashOf(r.player); if (!c) return null;
+    const [pnl, vol, ses, wk, won, lost, r4, bw, bl, last] = c;
+    const w = el('div', 'pdb');
+    const h = el('h4', null, 'Cash record · PhenomDB · ' + mon(state.pdb.cash.from) + '–' + mon(state.pdb.cash.to)); w.append(h);
+    const kv = el('div', 'kv'); const add = (lab, val, cls) => { const x = el('div'); x.append(document.createTextNode(lab)); x.append(el('b', cls || null, val)); kv.append(x); };
+    add('Profit', money(pnl), pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : null); add('Sessions', fI(ses)); add('Avg buy-in', '$' + fI(Math.round(vol / ses))); add('Up sessions', won + lost ? Math.round(100 * won / (won + lost)) + '%' : '–');
+    w.append(kv);
+    const bits = ['last 4 weeks: ' + money(r4), 'biggest win ' + money(bw) + ', loss ' + money(bl)];
+    if (last) bits.push('last played ' + mon(last));
+    w.append(el('p', null, bits.join(' · ')));
+    return w;
+  }
   function pdbBlock(r) {
     const d = pdbOf(r.player); if (!d) return null;
     const w = el('div', 'pdb');
@@ -430,6 +445,7 @@ details p { max-width: 75ch; color: var(--muted); }
     if (r.note) body.append(el('p', 'note', r.note));
     if (state.fmt !== 'tour') { const b = block(r, 'cash', 'Cash'); if (b) body.append(b); }
     if (state.fmt !== 'cash') { const b = block(r, 'tour', 'Tournaments'); if (b) body.append(b); }
+    const cb = cashBlock(r); if (cb) body.append(cb);
     const pb = pdbBlock(r); if (pb) body.append(pb);
     c.append(body); return c;
   }
@@ -486,7 +502,8 @@ details p { max-width: 75ch; color: var(--muted); }
     const reads = allR.slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
-    const pd = pdbOf(r.player); if (pd) b.append(el('div', 'pdbl', 'PhenomDB: ' + fI(pd.tp) + ' tourneys' + (pd.ab >= 1 ? ', ROI ' + pct(pd.roi) : '') + (pd.rank && pd.q ? ', #' + fI(pd.rank) : '')));
+    const cc = cashOf(r.player); if (cc) b.append(el('div', 'pdbl', 'Cash: ' + money(cc[0]) + ' over ' + fI(cc[2]) + ' sessions, avg buy-in $' + fI(Math.round(cc[1] / cc[2]))));
+    const pd = pdbOf(r.player); if (pd) b.append(el('div', 'pdbl', 'Tourneys: ' + fI(pd.tp) + (pd.ab >= 1 ? ', ROI ' + pct(pd.roi) : '') + (pd.rank && pd.q ? ', #' + fI(pd.rank) : '')));
     const last = T.seats.length - 1;
     if (last > 0) {
       const mv = el('div', 'mvs');
