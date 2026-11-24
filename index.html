@@ -106,6 +106,15 @@ details.gpick > summary { font-weight: 400; }
 .track { position: relative; height: 6px; border-radius: 3px; background: var(--line); margin-top: 4px; }
 .track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--felt); }
 .track .pool { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--ink); opacity: .55; }
+.pdb { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.pdb h4 { margin: 0; font: 600 11px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.pdb h4 a { color: var(--felt); text-transform: none; letter-spacing: 0; font-weight: 500; }
+.pdb .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pdb .kv div { font-size: 11.5px; color: var(--muted); }
+.pdb .kv b { display: block; font: 500 14px var(--mono); color: var(--ink); }
+.pdb .pos { color: var(--felt) !important; } .pdb .neg { color: var(--up) !important; }
+.pdb p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.scard .pdbl { font-size: 11px; color: var(--muted); }
 .reads { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .reads li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 13.5px; line-height: 1.35; }
 .reads .arr { font-weight: 700; text-align: center; }
@@ -284,6 +293,7 @@ details p { max-width: 75ch; color: var(--muted); }
     <p>Every uploaded hand is read in the uploader's browser. For each opponent the page counts what they did (entered the pot, raised first in, 3-bet, folded to a steal, folded to bets on each draw or street, stood pat, showed down). A read appears when a player's rate is far enough from everyone else's on the same chances that it is unlikely to be luck: a z-score of 2.5 or more on at least 25 chances, the top five per format. Preflop numbers pool the blind games; WTSD and fold-to-river pool 2-7 Triple Draw, A-5 Triple Draw, Badugi and Badeucy. "Shown weak" rates only see hands that reached showdown. Style compares a player's VPIP with the pool's and their PFR with their VPIP, on 100+ hands. With a few hundred hands, treat a read as a lean, not a rule.</p>
     <p>Players change, so by default recent hands count more: each month's hands count half as much as the month three months later (switch this under Weighting). Hand counts on the cards are always real hands; the percentages and reads use the weighting, and a read still needs 25 real chances.</p>
     <p>Notes in gold were written by hand for a few regulars and do not update with new uploads.</p>
+    <p>The tournament record section comes from <a href="https://phenomdb.com" target="_blank" rel="noopener">PhenomDB</a>, which builds it from public on-chain buy-ins and payouts. It is refreshed daily for players with a card, it only shows players PhenomDB has matched to a name, and players who set their PhenomDB profile to private are left out.</p>
   </details>
 </div>
 <script src="engine.js"></script>
@@ -384,6 +394,26 @@ details p { max-width: 75ch; color: var(--muted); }
     } else b.append(el('p', 'none', 'Nothing stands out from the pool yet.'));
     return b;
   }
+  const money = v => (v < 0 ? '−$' : '+$') + fI(Math.abs(v));
+  const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0) + '%';
+  const pdbUrl = name => 'https://phenomdb.com/tournytrack?player=' + encodeURIComponent(name);
+  function pdbOf(name) { const e = state.pdb && state.pdb.players[name]; return e && !e.nf && !e.priv && e.tp > 0 ? e : null; }
+  function pdbBlock(r) {
+    const d = pdbOf(r.player); if (!d) return null;
+    const w = el('div', 'pdb');
+    const h = el('h4', null, 'Tournament record · PhenomDB'); const a = el('a', null, 'Open ↗'); a.href = pdbUrl(d.n); a.target = '_blank'; a.rel = 'noopener'; a.setAttribute('aria-label', 'Open ' + r.player + ' on PhenomDB (new tab)'); h.append(a); w.append(h);
+    const kv = el('div', 'kv'); const add = (lab, val, cls) => { const x = el('div'); x.append(document.createTextNode(lab)); x.append(el('b', cls || null, val)); kv.append(x); };
+    add('Tourneys', fI(d.tp)); add('Profit', money(d.net), d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : null); add('ROI', pct(d.roi), d.roi > 0 ? 'pos' : d.roi < 0 ? 'neg' : null); add('ITM', d.itm.toFixed(0) + '%');
+    w.append(kv);
+    const bits = [];
+    if (d.rank && d.q) bits.push('Rated #' + fI(d.rank) + ' of ' + fI(d.of));
+    if (d.w) bits.push(d.w + (d.w === 1 ? ' win' : ' wins'));
+    if (d.ab) bits.push('avg buy-in $' + d.ab.toFixed(0));
+    if (d.m30 && d.m30.n) bits.push('last 30 days: ' + d.m30.n + ' played, ' + money(d.m30.net));
+    if (bits.length) w.append(el('p', null, bits.join(' · ')));
+    if (d.g && d.g.length) w.append(el('p', null, 'Plays most: ' + d.g.map(x => x[0]).join(', ')));
+    return w;
+  }
   function card(r) {
     const c = el('article', 'card'); c.id = 'p-' + r.player.replace(/[^A-Za-z0-9_-]/g, '_');
     const st = state.fmt === 'tour' ? (r.tour_style || r.style) : state.fmt === 'cash' ? (r.cash_style || r.style) : r.style;
@@ -400,6 +430,7 @@ details p { max-width: 75ch; color: var(--muted); }
     if (r.note) body.append(el('p', 'note', r.note));
     if (state.fmt !== 'tour') { const b = block(r, 'cash', 'Cash'); if (b) body.append(b); }
     if (state.fmt !== 'cash') { const b = block(r, 'tour', 'Tournaments'); if (b) body.append(b); }
+    const pb = pdbBlock(r); if (pb) body.append(pb);
     c.append(body); return c;
   }
   // ---------- my table ----------
@@ -455,6 +486,7 @@ details p { max-width: 75ch; color: var(--muted); }
     const reads = allR.slice(0, 2); const ul = el('ul', 'sr');
     if (r.note) ul.append(el('li', null, r.note)); else if (reads.length) reads.forEach(x2 => ul.append(el('li', null, (x2.dir > 0 ? '▲ ' : '▼ ') + x2.text))); else ul.append(el('li', 'small', 'Nothing stands out yet'));
     b.append(ul);
+    const pd = pdbOf(r.player); if (pd) b.append(el('div', 'pdbl', 'PhenomDB: ' + fI(pd.tp) + ' tourneys, ROI ' + pct(pd.roi) + (pd.rank && pd.q ? ', #' + fI(pd.rank) : '')));
     const last = T.seats.length - 1;
     if (last > 0) {
       const mv = el('div', 'mvs');
@@ -655,7 +687,8 @@ details p { max-width: 75ch; color: var(--muted); }
   // ---------- load ----------
   async function loadBase() {
     try {
-      const [b, ids] = await Promise.all([fetch('data/base.json').then(r => r.json()), fetch('data/ids.json').then(r => r.json())]);
+      const [b, ids, pdb] = await Promise.all([fetch('data/base.json').then(r => r.json()), fetch('data/ids.json').then(r => r.json()), fetch('data/phenomdb.json').then(r => r.ok ? r.json() : null).catch(() => null)]);
+      state.pdb = pdb && pdb.players ? pdb : null;
       E.merge(state.acc, {counts: b.counts, last: b.last}); ids.forEach(id => state.ids.add(id)); state.baseHands = b.hands; state.uploads = b.contributions || 0;
       rebuild();
     } catch (e) { $('grid').replaceChildren(el('p', 'empty', 'The player data did not load. Reload the page to try again.')); }

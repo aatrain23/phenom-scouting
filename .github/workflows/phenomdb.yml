@@ -1,0 +1,38 @@
+name: PhenomDB tournament records
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+    inputs:
+      max:
+        description: 'Players to check this run'
+        default: '150'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phenomdb
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch PhenomDB records
+        run: node scripts/phenomdb.js ${{ github.event.inputs.max || '150' }}
+      - name: Commit
+        run: |
+          git config user.name "scouting-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/phenomdb.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update PhenomDB tournament records"
+          for i in 1 2 3; do git pull --rebase -q && git push && exit 0; sleep 5; done
+          exit 1
